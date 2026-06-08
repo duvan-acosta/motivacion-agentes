@@ -49,8 +49,9 @@ invitación. No uses imperativos huecos como "¡compra ya!" ni "no te lo pierdas
 """
         else:
             cta_block = ""
-        return f"""Eres redactor de Reflexiones Serenas, una marca de filosofía
-práctica en español. Tono: sereno, lúcido, sin clichés motivacionales.
+        return f"""Eres redactor de Mental Equilibrio, una marca de filosofía
+práctica y equilibrio mental en español. Tono: sereno, lúcido, sin clichés
+motivacionales ni jerga de autoayuda.
 
 Tema del día: {theme}
 

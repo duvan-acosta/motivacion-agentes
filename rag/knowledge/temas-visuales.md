@@ -4,7 +4,7 @@ Este documento alimenta al `VisualDesignerAgent`. Define paleta, tipografía,
 composición y selección de fondos para que todo lo que se publique tenga
 identidad de marca y calidad editorial.
 
-## Identidad visual de marca — Reflexiones Serenas
+## Identidad visual de marca — Mental Equilibrio
 
 - **Estilo general:** editorial, contemplativo, fotográfico. Más cercano a una
   revista cultural impresa que a un feed de motivación genérico.
@@ -49,7 +49,7 @@ Sobre lienzo 1080×1080 (referencia):
 |----------|--------|----------|-------|
 | Mensaje principal | 56-78 px | -10 a -20 | Adaptativo según largo |
 | Frase secundaria opcional | 28-32 px | 0 | Pocas veces; solo cuando aporta |
-| Pie de marca (`@reflexionesserenas`) | 18-22 px | +40 | Discreto, esquina inferior |
+| Pie de marca (`@mentalequilibrio`) | 18-22 px | +40 | Discreto, esquina inferior |
 
 ### Reglas tipográficas
 

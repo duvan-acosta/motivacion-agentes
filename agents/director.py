@@ -34,5 +34,5 @@ class DirectorAgent:
             "theme": selected,
             "content_id": content_id,
             "planned_at": datetime.now().isoformat(),
-            "brand": self.brand.get("brand", {}).get("name", "Reflexiones Serenas"),
+            "brand": self.brand.get("brand", {}).get("name", "Mental Equilibrio"),
         }

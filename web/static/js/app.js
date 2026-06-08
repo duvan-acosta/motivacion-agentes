@@ -1,4 +1,4 @@
-/* Panel admin — Reflexiones Serenas */
+/* Panel admin — Mental Equilibrio */
 
 const SECTION_TITLES = {
   inicio: "Inicio",

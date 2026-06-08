@@ -132,7 +132,7 @@ const cover = [
     spacing: { after: 120 },
     children: [
       new TextRun({
-        text: "Reflexiones Serenas — canales de filosofía práctica",
+        text: "Mental Equilibrio — canales de filosofía práctica",
         font: FONT,
         size: 28,
         italics: true,
@@ -165,7 +165,7 @@ const cover = [
 const summary = [
   h1("Resumen ejecutivo"),
   p(
-    "Este documento define la ruta para monetizar los canales sociales de Reflexiones Serenas tan pronto como sea razonable, sin sacrificar el tono editorial sereno que sostiene la marca. Se asume un sistema de generación automatizado ya operativo (agentes, RAG, pipelines de imagen y video, panel de administración)."
+    "Este documento define la ruta para monetizar los canales sociales de Mental Equilibrio tan pronto como sea razonable, sin sacrificar el tono editorial sereno que sostiene la marca. Se asume un sistema de generación automatizado ya operativo (agentes, RAG, pipelines de imagen y video, panel de administración)."
   ),
   p("La estrategia se organiza en cuatro fases:"),
   num("Fase 0 (semana 1): preparar la infraestructura de monetización antes de publicar."),
@@ -374,8 +374,8 @@ const closing = [
 
 // Build document --------------------------------------------------------------
 const doc = new Document({
-  creator: "Reflexiones Serenas",
-  title: "Plan de monetización — Reflexiones Serenas",
+  creator: "Mental Equilibrio",
+  title: "Plan de monetización — Mental Equilibrio",
   styles: {
     default: { document: { run: { font: FONT, size: 22 } } },
     paragraphStyles: [

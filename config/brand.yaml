@@ -1,6 +1,8 @@
 brand:
-  name: "Reflexiones Serenas"
-  tagline: "Filosofía práctica para el día a día"
+  name: "Mental Equilibrio"
+  tagline: "Equilibrio mental para la vida diaria"
+  handle: "@mentalequilibrio"
+  email: "mentalequilibrio18@gmail.com"
   language: es
   tone:
     - sereno

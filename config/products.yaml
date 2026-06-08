@@ -21,7 +21,7 @@ products:
   - id: wallpapers_pack
     name: "30 Wallpapers Reflexivos"
     short_name: "los wallpapers"
-    url: "https://stan.store/reflexionesserenas/p/wallpapers"
+    url: "https://stan.store/mentalequilibrio/p/wallpapers"
     description: "Pack de 30 fondos en 4K vertical con frases reflexivas para móvil."
     price_usd: 7
     cta_style: invitation
@@ -29,7 +29,7 @@ products:
   - id: journal_30dias
     name: "Journal Digital — 30 días"
     short_name: "el journal"
-    url: "https://stan.store/reflexionesserenas/p/journal"
+    url: "https://stan.store/mentalequilibrio/p/journal"
     description: "PDF interactivo con una pregunta reflexiva por día durante 30 días."
     price_usd: 12
     cta_style: question
@@ -37,7 +37,7 @@ products:
   - id: newsletter
     name: "Newsletter"
     short_name: "la newsletter"
-    url: "https://reflexionesserenas.kit.com/suscribirse"
+    url: "https://mentalequilibrio.kit.com/suscribirse"
     description: "Una reflexión los domingos por la mañana, gratis."
     price_usd: 0
     cta_style: full
