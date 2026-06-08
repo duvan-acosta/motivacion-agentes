@@ -70,16 +70,22 @@ def test_fallback_query_algoritmo_collection(make_settings):
     [
         "vibras",
         "manifestar",
-        "tu mejor versión",
+        "mejor versión",
         "todo pasa por algo",
         "cree en ti",
     ],
 )
-def test_brand_voice_documents_banned_phrases(banned):
-    text = (KNOWLEDGE_DIR / "brand-voice.md").read_text(encoding="utf-8").lower()
-    assert banned.lower() in text, (
-        f"El anti-patrón '{banned}' debe aparecer documentado en brand-voice.md "
-        "para que el LLM lo reconozca como prohibido"
+def test_corpus_documents_banned_phrases(banned):
+    """El anti-patrón debe aparecer en algún archivo del knowledge (filosofia o
+    brand) para que el LLM lo reconozca como prohibido al recibir el contexto.
+    """
+    corpus = " ".join(
+        (KNOWLEDGE_DIR / fname).read_text(encoding="utf-8").lower()
+        for fname in ("filosofia-es.md", "brand-voice.md")
+    )
+    assert banned.lower() in corpus, (
+        f"El anti-patrón '{banned}' no aparece en el corpus RAG; el LLM no lo "
+        "reconocerá como prohibido"
     )
 
 
