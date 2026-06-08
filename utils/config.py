@@ -53,6 +53,16 @@ class Settings(BaseSettings):
     x_access_token_secret: str = Field(default="", alias="X_ACCESS_TOKEN_SECRET")
     x_bearer_token: str = Field(default="", alias="X_BEARER_TOKEN")
 
+    # Hosting público de media (las APIs requieren URL pública, no bytes)
+    media_host_provider: str = Field(default="none", alias="MEDIA_HOST_PROVIDER")
+    media_public_base_url: str = Field(default="", alias="MEDIA_PUBLIC_BASE_URL")
+    aws_access_key_id: str = Field(default="", alias="AWS_ACCESS_KEY_ID")
+    aws_secret_access_key: str = Field(default="", alias="AWS_SECRET_ACCESS_KEY")
+    s3_bucket: str = Field(default="", alias="S3_BUCKET")
+    s3_region: str = Field(default="us-east-1", alias="S3_REGION")
+    s3_public_base_url: str = Field(default="", alias="S3_PUBLIC_BASE_URL")
+    cloudinary_url: str = Field(default="", alias="CLOUDINARY_URL")
+
     chroma_persist_dir: str = Field(default="data/chroma", alias="CHROMA_PERSIST_DIR")
     publication_queue_dir: str = Field(
         default="publication_queue", alias="PUBLICATION_QUEUE_DIR"
@@ -87,6 +97,34 @@ class Settings(BaseSettings):
 
     def has_meta(self) -> bool:
         return bool(self.meta_access_token and self.meta_instagram_account_id)
+
+    def has_tiktok(self) -> bool:
+        return bool(self.tiktok_access_token and self.tiktok_client_key)
+
+    def has_youtube(self) -> bool:
+        return bool(
+            self.youtube_client_id
+            and self.youtube_client_secret
+            and self.youtube_refresh_token
+        )
+
+    def has_x(self) -> bool:
+        return bool(
+            self.x_api_key
+            and self.x_api_secret
+            and self.x_access_token
+            and self.x_access_token_secret
+        )
+
+    def has_media_host(self) -> bool:
+        provider = self.media_host_provider.lower()
+        if provider == "base_url":
+            return bool(self.media_public_base_url)
+        if provider == "s3":
+            return bool(self.s3_bucket and self.aws_access_key_id and self.aws_secret_access_key)
+        if provider == "cloudinary":
+            return bool(self.cloudinary_url)
+        return False
 
     def use_mock(self) -> bool:
         if self.demo_mode:

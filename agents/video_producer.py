@@ -20,24 +20,41 @@ class VideoProducerAgent:
         self.rag = get_rag_store()
         self.brand = load_yaml("config/brand.yaml")
 
-    def _build_script_prompt(self, message: str, theme: str, context: list[str]) -> str:
+    def _build_script_prompt(
+        self,
+        message: str,
+        theme: str,
+        filosofia_ctx: list[str],
+        guion_ctx: list[str],
+    ) -> str:
         video_cfg = self.brand.get("video", {})
         min_s = video_cfg.get("min_duration_seconds", 20)
         max_s = video_cfg.get("max_duration_seconds", 40)
-        ctx = "\n".join(context[:4])
-        return f"""Expande este mensaje en un guion de voz en off para video vertical motivacional.
+        filosofia = "\n---\n".join(filosofia_ctx[:3])
+        guion = "\n---\n".join(guion_ctx[:4])
+        return f"""Eres guionista de video corto reflexivo (Reels/Shorts/TikTok).
+Voz de marca: serena, lúcida, sin clichés motivacionales.
 
-Mensaje: {message}
+Mensaje núcleo: {message}
 Tema: {theme}
-Duración objetivo: {min_s}-{max_s} segundos (~80-120 palabras)
-Contexto: {ctx}
+Duración objetivo: {min_s}-{max_s} segundos.
+Cadencia de voz: 2.0-2.5 palabras/segundo (≈ 70-100 palabras totales).
 
-Reglas:
-- Español sereno y profundo
-- Frases cortas para overlays de texto
-- Hook en las primeras 2 frases
-- Cierre impactante
-Responde SOLO JSON: {{"script": "texto con saltos de línea entre frases"}}"""
+Arquitectura narrativa que DEBES seguir (de la guía RAG):
+{guion}
+
+Filosofía de referencia (inspírate, no copies):
+{filosofia}
+
+Reglas duras:
+- Cada salto de línea es un overlay independiente (máx 12 palabras por línea).
+- Hook silencioso en los primeros 3 segundos (1 frase). Nada de gritar.
+- Una sola idea en todo el video.
+- Cierre que devuelva al espectador a sí mismo, sin CTA explícito.
+- Prohibido: "vibras", "energías", "tu mejor versión", citas atribuidas.
+
+Responde SOLO JSON válido:
+{{"script": "frase 1\\nfrase 2\\nfrase 3\\n..."}}"""
 
     def _call_llm_script(self, prompt: str) -> str:
         from langchain_openai import ChatOpenAI
@@ -64,9 +81,12 @@ Responde SOLO JSON: {{"script": "texto con saltos de línea entre frases"}}"""
             demo = pick_demo_content(theme)
             return {"script": demo.get("script", ""), "theme": theme, "message": message}
 
-        ctx = self.rag.query("filosofia", f"guion video {theme} narración")
+        filosofia_ctx = self.rag.query("filosofia", f"sub-ángulo {theme} reflexión profunda")
+        guion_ctx = self.rag.query("guion", f"arquitectura plantilla {theme}")
         try:
-            script = self._call_llm_script(self._build_script_prompt(message, theme, ctx))
+            script = self._call_llm_script(
+                self._build_script_prompt(message, theme, filosofia_ctx, guion_ctx)
+            )
             return {"script": script.strip(), "theme": theme, "message": message}
         except Exception as exc:
             logger.warning("Guion LLM falló: %s", exc)

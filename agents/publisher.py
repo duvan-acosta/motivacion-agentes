@@ -11,6 +11,7 @@ from typing import Any
 
 from PIL import Image
 
+from rag.store import get_rag_store
 from utils.config import ensure_dir, get_settings, load_yaml
 from utils.demo_mode import demo_tweet, demo_youtube_meta
 
@@ -21,6 +22,7 @@ class PublisherAgent:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.platforms = load_yaml("config/platforms.yaml")
+        self.rag = get_rag_store()
 
     def _validate_image(self, path: Path, width: int, height: int) -> bool:
         if not path.exists():
@@ -92,6 +94,12 @@ class PublisherAgent:
         (tw_dir / "tweet.txt").write_text(demo_tweet(message, theme), encoding="utf-8")
 
         manifest = self._build_manifest(base)
+        # Sugerencias del RAG de algoritmo, una por plataforma. Útil para que un
+        # editor humano (o un futuro QA agent) valide hooks y CTAs antes de
+        # publicar. No bloquea la publicación.
+        for platform in manifest["platforms"]:
+            tips = self.rag.query("algoritmo", f"{platform} hook CTA hashtags señales")
+            manifest["platforms"][platform]["algorithm_tips"] = tips[:2]
         (base / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )

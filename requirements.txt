@@ -18,6 +18,12 @@ Pillow>=10.0.0
 moviepy>=1.0.3,<2.0.0
 requests>=2.31.0
 
+# Publicación (firma OAuth 1.0a para X/Twitter)
+requests-oauthlib>=1.3.0
+# Hosting de media opcional (descomenta el que uses):
+# boto3>=1.34.0        # proveedor S3
+# cloudinary>=1.40.0   # proveedor Cloudinary
+
 # Scheduling
 APScheduler>=3.10.0
 
@@ -33,3 +39,6 @@ python-multipart>=0.0.12
 
 # TTS (optional ElevenLabs)
 elevenlabs>=1.0.0
+
+# Tests
+pytest>=8.0.0

@@ -12,16 +12,29 @@ from utils.config import ensure_dir, get_settings
 
 logger = logging.getLogger(__name__)
 
-THEME_GRADIENTS = {
-    "resiliencia": ((30, 40, 60), (80, 100, 130)),
-    "calma": ((20, 50, 70), (60, 120, 150)),
-    "claridad": ((40, 30, 60), (200, 150, 80)),
-    "propósito": ((25, 45, 35), (70, 110, 90)),
-    "gratitud": ((50, 30, 20), (180, 120, 60)),
-    "presencia": ((30, 35, 40), (90, 100, 110)),
-    "coraje": ((20, 25, 50), (60, 80, 140)),
-    "sabiduría": ((15, 15, 35), (50, 50, 90)),
+def _hex_to_rgb(value: str) -> tuple[int, int, int]:
+    v = value.lstrip("#")
+    if len(v) != 6:
+        return (40, 40, 50)
+    return tuple(int(v[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+# Paletas alineadas con rag/knowledge/temas-visuales.md.
+# Gradiente: (sombra → dominante), de arriba a abajo.
+THEME_GRADIENTS_HEX: dict[str, tuple[str, str]] = {
+    "resiliencia": ("#0B1117", "#1F2A38"),
+    "calma": ("#10202A", "#2C4A52"),
+    "claridad": ("#3B2F1F", "#E6C893"),
+    "propósito": ("#1A2519", "#3E5641"),
+    "proposito": ("#1A2519", "#3E5641"),
+    "gratitud": ("#5C3A28", "#C57B57"),
+    "presencia": ("#13151B", "#2A2D34"),
+    "coraje": ("#1A0C13", "#3C1F2B"),
+    "sabiduría": ("#0A0E1A", "#1A2238"),
+    "sabiduria": ("#0A0E1A", "#1A2238"),
 }
+
+THEME_GRADIENTS = {k: (_hex_to_rgb(s), _hex_to_rgb(d)) for k, (s, d) in THEME_GRADIENTS_HEX.items()}
 
 
 def fetch_pexels_photo(keywords: list[str], width: int = 1080, height: int = 1080) -> Image.Image | None:

@@ -14,6 +14,8 @@ COLLECTIONS = {
     "visual": ["temas-visuales.md"],
     "brand": ["brand-voice.md"],
     "platforms": ["platforms-specs.yaml"],
+    "guion": ["guion-video.md"],
+    "algoritmo": ["algoritmo-plataformas.md"],
 }
 
 

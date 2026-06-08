@@ -11,15 +11,33 @@ from utils.config import get_settings, load_yaml
 logger = logging.getLogger(__name__)
 
 THEME_KEYWORDS = {
-    "resiliencia": ["mountain peak", "storm clearing", "rocky cliff"],
-    "calma": ["calm ocean", "peaceful lake", "misty forest"],
-    "claridad": ["sunrise", "golden hour", "open sky"],
-    "propósito": ["path forest", "compass", "horizon road"],
-    "gratitud": ["sunset", "flower field", "warm light"],
-    "presencia": ["zen garden", "rain drops", "single tree"],
-    "coraje": ["ocean waves", "eagle flight", "lightning distant"],
-    "sabiduría": ["ancient tree", "stars night", "old library"],
+    "resiliencia": ["mountain peak fog", "storm clearing", "rocky coast"],
+    "calma": ["calm lake mist", "foggy forest dawn", "still water"],
+    "claridad": ["sunrise horizon", "golden hour field", "open sky"],
+    "propósito": ["forest path morning", "distant lighthouse", "country road"],
+    "proposito": ["forest path morning", "distant lighthouse", "country road"],
+    "gratitud": ["warm sunset", "wildflowers backlit", "tea morning"],
+    "presencia": ["raindrops window", "single tree field", "zen garden"],
+    "coraje": ["ocean storm waves", "eagle flight", "distant lightning"],
+    "sabiduría": ["starry sky milky way", "ancient tree", "old books"],
+    "sabiduria": ["starry sky milky way", "ancient tree", "old books"],
 }
+
+# Paletas HEX por tema (sincronizadas con rag/knowledge/temas-visuales.md).
+THEME_PALETTES: dict[str, dict[str, str]] = {
+    "resiliencia": {"dominant": "#1F2A38", "accent": "#C29A55", "shadow": "#0B1117"},
+    "calma": {"dominant": "#2C4A52", "accent": "#A8C5C0", "shadow": "#10202A"},
+    "claridad": {"dominant": "#E6C893", "accent": "#FFFFFF", "shadow": "#3B2F1F"},
+    "propósito": {"dominant": "#3E5641", "accent": "#D7B27B", "shadow": "#1A2519"},
+    "proposito": {"dominant": "#3E5641", "accent": "#D7B27B", "shadow": "#1A2519"},
+    "gratitud": {"dominant": "#C57B57", "accent": "#F5E6CA", "shadow": "#5C3A28"},
+    "presencia": {"dominant": "#2A2D34", "accent": "#9BA9B4", "shadow": "#13151B"},
+    "coraje": {"dominant": "#3C1F2B", "accent": "#D88C5A", "shadow": "#1A0C13"},
+    "sabiduría": {"dominant": "#1A2238", "accent": "#9DAAF2", "shadow": "#0A0E1A"},
+    "sabiduria": {"dominant": "#1A2238", "accent": "#9DAAF2", "shadow": "#0A0E1A"},
+}
+
+DEFAULT_PALETTE = {"dominant": "#2A2D34", "accent": "#9BA9B4", "shadow": "#13151B"}
 
 
 class VisualDesignerAgent:
@@ -29,17 +47,22 @@ class VisualDesignerAgent:
         self.brand = load_yaml("config/brand.yaml")
 
     def design(self, theme: str, message: str, keywords: list[str] | None = None) -> dict[str, Any]:
-        visual_ctx = self.rag.query("visual", f"tema {theme} composición fondo")
-        kw = keywords or THEME_KEYWORDS.get(theme, ["nature peaceful", "landscape calm"])
-        if not keywords:
-            kw = THEME_KEYWORDS.get(theme, kw)
+        visual_ctx = self.rag.query(
+            "visual", f"{theme} paleta composición fondo tipografía safe zone"
+        )
 
+        # Las visual_keywords del ContentCreator (en inglés) tienen prioridad; si no,
+        # caemos al mapeo por tema y, por último, a un default neutro.
+        kw = keywords if keywords else THEME_KEYWORDS.get(theme, ["nature peaceful", "landscape calm"])
+        palette = THEME_PALETTES.get(theme, DEFAULT_PALETTE)
         visual_config = self.brand.get("visual", {})
+
         return {
             "theme": theme,
             "message": message,
             "search_keywords": kw[:3],
-            "visual_context": visual_ctx[:2],
+            "visual_context": visual_ctx[:3],
+            "palette": palette,
             "font_family": visual_config.get("font_family", "Playfair Display"),
             "fallback_font": visual_config.get("fallback_font", "DejaVu Serif"),
             "text_color": visual_config.get("text_color", "#FFFFFF"),

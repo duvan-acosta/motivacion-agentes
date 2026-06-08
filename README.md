@@ -90,6 +90,19 @@ python -m cli schedule
 python scripts/publish_retry.py
 ```
 
+## Tests
+
+Suite con `pytest`. Los tests pesados (workflow completo, empaquetado) se omiten
+automáticamente si faltan dependencias opcionales (`langgraph`, `Pillow`).
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
+Cubren: modos de operación, selección de media host, transiciones de `status.json`,
+fallback manual de los adaptadores sin credenciales, empaquetado y workflow demo.
+
 ## Panel web de administración
 
 Interfaz web en español para administrar agentes, servicios, material generado y estadísticas.
@@ -190,21 +203,46 @@ publication_queue/
 
 | Plataforma | Adaptador | Estado |
 |------------|-----------|--------|
-| Instagram/Facebook | Meta Graph API | Implementado con fallback manual |
-| TikTok | Content Posting API | Stub |
-| YouTube | Data API v3 | Stub |
-| X/Twitter | API v2 | Stub |
+| Instagram | Meta Graph API (contenedor + publish) | Implementado (requiere media host) |
+| Facebook | Graph API `/{page}/photos` | Implementado (requiere media host + Page ID) |
+| TikTok | Content Posting API (init + upload) | Implementado (requiere app aprobada) |
+| YouTube | Data API v3 (OAuth refresh + upload reanudable) | Implementado |
+| X/Twitter | media v1.1 + tweets v2 (OAuth 1.0a) | Implementado |
 
-Si la API falla, `status.json` pasa a `manual` y los archivos quedan listos para subida manual.
+Si la API falla o faltan credenciales, `status.json` pasa a `manual` y los archivos quedan listos para subida manual.
+
+### Hosting de media (requisito para Instagram/Facebook)
+
+La Graph API de Meta **no acepta subir bytes**: requiere una **URL pública** de la
+imagen/video. Configura un proveedor con `MEDIA_HOST_PROVIDER`:
+
+| Proveedor | Variable(s) | Notas |
+|-----------|-------------|-------|
+| `none` (default) | — | Sin hosting → publicación manual |
+| `base_url` | `MEDIA_PUBLIC_BASE_URL` | Sirve `publication_queue/` estáticamente bajo esa URL |
+| `s3` | `S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_REGION` | Requiere `pip install boto3` |
+| `cloudinary` | `CLOUDINARY_URL` | Requiere `pip install cloudinary` |
+
+Las APIs basadas en subida directa de binario (TikTok, YouTube, X) **no** necesitan media host.
 
 ## Corpus RAG
 
-Archivos en `rag/knowledge/`:
+Seis colecciones en `rag/knowledge/`, una por archivo. Cada agente consulta las
+que necesita; los prompts incluyen los chunks recuperados como contexto.
 
-- `filosofia-es.md` — Estoicismo, temas, estilo de mensajes
-- `temas-visuales.md` — Mapeo tema → fondos Pexels
-- `brand-voice.md` — Tono de marca y captions
-- `platforms-specs.yaml` — Specs técnicas por red
+| Colección | Archivo | Consumido por |
+|-----------|---------|---------------|
+| `filosofia` | `filosofia-es.md` | ContentCreator, VideoProducer |
+| `brand` | `brand-voice.md` | ContentCreator |
+| `visual` | `temas-visuales.md` | VisualDesigner |
+| `guion` | `guion-video.md` | VideoProducer |
+| `algoritmo` | `algoritmo-plataformas.md` | ContentCreator, Publisher |
+| `platforms` | `platforms-specs.yaml` | Referencia técnica |
+
+Los contenidos incluyen: tradiciones filosóficas múltiples (estoicismo, zen,
+taoísmo, existencialismo, sabiduría iberoamericana), paletas HEX por tema,
+plantillas de hooks/cierres, arquitectura narrativa para video corto y best
+practices del algoritmo por plataforma (saves, shares, completion rate).
 
 ## Estructura del proyecto
 
