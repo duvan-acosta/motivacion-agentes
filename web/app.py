@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from web.api import agents, analytics, config, content, dashboard, services
+from web.api import agents, analytics, config, content, dashboard, products, services
 
 WEB_DIR = Path(__file__).resolve().parent
 
@@ -28,6 +28,7 @@ app.include_router(services.router)
 app.include_router(content.router)
 app.include_router(analytics.router)
 app.include_router(config.router)
+app.include_router(products.router)
 
 
 @app.get("/", response_class=HTMLResponse)

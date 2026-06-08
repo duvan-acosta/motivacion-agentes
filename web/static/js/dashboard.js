@@ -68,6 +68,7 @@ async function loadSection(id) {
       case "servicios": await loadServices(); break;
       case "material": await loadMaterial(); break;
       case "estadisticas": await loadAnalytics(); break;
+      case "productos": await loadProducts(); break;
       case "configuracion": await loadConfig(); break;
     }
   } catch (e) {
@@ -391,6 +392,137 @@ async function saveConfig() {
   }
 }
 
+/* ---------- Productos ---------- */
+
+let productsCache = { products: [], active_product_id: null };
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+async function loadProducts() {
+  productsCache = await api("/api/products");
+  renderProducts();
+}
+
+function renderProducts() {
+  const { products, active_product_id } = productsCache;
+
+  // Selector de producto activo
+  const sel = document.getElementById("active-product-select");
+  sel.innerHTML = '<option value="">— Sin producto activo —</option>' +
+    products.map((p) =>
+      `<option value="${escapeHtml(p.id)}" ${p.id === active_product_id ? "selected" : ""}>${escapeHtml(p.name)} (${escapeHtml(p.id)})</option>`
+    ).join("");
+
+  const active = products.find((p) => p.id === active_product_id);
+  const summary = document.getElementById("active-product-summary");
+  if (active) {
+    summary.innerHTML = `Activo: <strong>${escapeHtml(active.name)}</strong> — ${escapeHtml(active.url)} (estilo CTA: ${escapeHtml(active.cta_style)})`;
+  } else {
+    summary.textContent = "No hay producto activo. Los captions se publicarán sin CTA de promoción.";
+  }
+
+  // Lista del catálogo
+  const list = document.getElementById("products-list");
+  if (!products.length) {
+    list.innerHTML = '<p class="config-hint">Sin productos. Crea uno con el formulario inferior.</p>';
+    return;
+  }
+  list.innerHTML = products.map((p) => `
+    <div class="config-field" style="padding:0.75rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <div><strong>${escapeHtml(p.name)}</strong>
+            ${p.id === active_product_id ? '<span class="badge badge-ok" style="margin-left:0.5rem">activo</span>' : ''}
+          </div>
+          <div class="config-hint">${escapeHtml(p.id)} · ${escapeHtml(p.cta_style || "short")} · $${p.price_usd || 0}</div>
+          <div class="config-hint" style="margin-top:0.25rem"><a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="color:var(--accent-gold)">${escapeHtml(p.url)}</a></div>
+          ${p.description ? `<div class="config-hint" style="margin-top:0.25rem">${escapeHtml(p.description)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn btn-secondary" data-edit="${escapeHtml(p.id)}">Editar</button>
+          <button class="btn btn-secondary" data-delete="${escapeHtml(p.id)}">Borrar</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  list.querySelectorAll("[data-edit]").forEach((btn) =>
+    btn.addEventListener("click", () => editProduct(btn.dataset.edit))
+  );
+  list.querySelectorAll("[data-delete]").forEach((btn) =>
+    btn.addEventListener("click", () => deleteProduct(btn.dataset.delete))
+  );
+}
+
+function editProduct(id) {
+  const p = productsCache.products.find((x) => x.id === id);
+  if (!p) return;
+  document.getElementById("product-form-title").textContent = `Editar: ${p.name}`;
+  document.getElementById("prod-id").value = p.id;
+  document.getElementById("prod-id").setAttribute("readonly", "readonly");
+  document.getElementById("prod-name").value = p.name || "";
+  document.getElementById("prod-short").value = p.short_name || "";
+  document.getElementById("prod-url").value = p.url || "";
+  document.getElementById("prod-desc").value = p.description || "";
+  document.getElementById("prod-price").value = p.price_usd || 0;
+  document.getElementById("prod-cta").value = p.cta_style || "short";
+  document.getElementById("productos").scrollIntoView({ behavior: "smooth", block: "end" });
+}
+
+function resetProductForm() {
+  document.getElementById("product-form-title").textContent = "Añadir producto";
+  document.getElementById("prod-id").removeAttribute("readonly");
+  ["prod-id","prod-name","prod-short","prod-url","prod-desc"].forEach((id) =>
+    document.getElementById(id).value = "");
+  document.getElementById("prod-price").value = 0;
+  document.getElementById("prod-cta").value = "short";
+}
+
+async function saveProduct() {
+  const payload = {
+    id: document.getElementById("prod-id").value.trim(),
+    name: document.getElementById("prod-name").value.trim(),
+    short_name: document.getElementById("prod-short").value.trim(),
+    url: document.getElementById("prod-url").value.trim(),
+    description: document.getElementById("prod-desc").value.trim(),
+    price_usd: parseFloat(document.getElementById("prod-price").value) || 0,
+    cta_style: document.getElementById("prod-cta").value,
+  };
+  try {
+    const res = await api("/api/products", { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) { toast(res.message || "No se pudo guardar", "error"); return; }
+    toast(res.message || "Producto guardado", "info");
+    resetProductForm();
+    await loadProducts();
+  } catch (e) { toast("Error al guardar: " + e.message, "error"); }
+}
+
+async function deleteProduct(id) {
+  if (!confirm(`¿Eliminar el producto "${id}"?`)) return;
+  try {
+    const res = await api(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok) { toast(res.message, "error"); return; }
+    toast("Producto eliminado", "info");
+    await loadProducts();
+  } catch (e) { toast("Error al borrar: " + e.message, "error"); }
+}
+
+async function setActiveProduct(productId) {
+  try {
+    const res = await api("/api/products/active", {
+      method: "POST",
+      body: JSON.stringify({ active_product_id: productId || null }),
+    });
+    if (!res.ok) { toast(res.message, "error"); return; }
+    toast(res.message, "info");
+    await loadProducts();
+  } catch (e) { toast("Error: " + e.message, "error"); }
+}
+
 function toggleMobileMenu(open) {
   document.getElementById("sidebar").classList.toggle("open", open);
   document.getElementById("mobile-overlay").classList.toggle("open", open);
@@ -410,6 +542,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("mobile-overlay").addEventListener("click", () => toggleMobileMenu(false));
   document.getElementById("btn-save-config").addEventListener("click", saveConfig);
   document.getElementById("btn-reload-config").addEventListener("click", loadConfig);
+  document.getElementById("btn-save-product").addEventListener("click", saveProduct);
+  document.getElementById("btn-reset-product-form").addEventListener("click", resetProductForm);
+  document.getElementById("btn-set-active").addEventListener("click", () => {
+    setActiveProduct(document.getElementById("active-product-select").value);
+  });
+  document.getElementById("btn-clear-active").addEventListener("click", () => setActiveProduct(null));
   document.getElementById("btn-generate").addEventListener("click", triggerGenerate);
   document.getElementById("btn-workflow").addEventListener("click", triggerWorkflow);
   document.getElementById("demo-toggle").addEventListener("change", toggleDemoMode);

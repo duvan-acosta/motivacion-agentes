@@ -32,6 +32,9 @@
         <div class="nav-item" data-section="estadisticas">
           <span class="nav-icon">◉</span> Estadísticas
         </div>
+        <div class="nav-item" data-section="productos">
+          <span class="nav-icon">◊</span> Productos
+        </div>
         <div class="nav-item" data-section="configuracion">
           <span class="nav-icon">⚙</span> Configuración
         </div>
@@ -176,6 +179,68 @@
         </div>
       </section>
 
+      <!-- PRODUCTOS -->
+      <section id="productos" class="section">
+        <div class="page-header">
+          <h2>Productos monetizables</h2>
+          <p>Catálogo de productos que se promueven en los captions. El producto activo se cierra en cada publicación con un CTA + URL con UTM.</p>
+        </div>
+        <div class="demo-banner" style="display:flex">
+          ℹ Los cambios se guardan en <code style="color:var(--accent-gold)">config/products.yaml</code> y aplican al próximo paquete generado.
+        </div>
+
+        <div class="panel">
+          <h3>Producto activo</h3>
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-top:0.5rem">
+            <select id="active-product-select" style="min-width:280px"></select>
+            <button class="btn btn-primary" id="btn-set-active">Activar</button>
+            <button class="btn btn-secondary" id="btn-clear-active">Sin producto</button>
+          </div>
+          <small id="active-product-summary" class="config-hint" style="display:block;margin-top:0.75rem"></small>
+        </div>
+
+        <div class="panel" style="margin-top:1rem">
+          <h3>Catálogo</h3>
+          <div id="products-list"></div>
+        </div>
+
+        <div class="panel" style="margin-top:1rem">
+          <h3 id="product-form-title">Añadir producto</h3>
+          <div class="config-fields">
+            <label class="config-field"><span>ID (minúsculas, guion bajo)</span>
+              <input type="text" id="prod-id" placeholder="ej. journal_30dias">
+            </label>
+            <label class="config-field"><span>Nombre</span>
+              <input type="text" id="prod-name" placeholder="Journal Digital — 30 días">
+            </label>
+            <label class="config-field"><span>Short name (cómo lo nombra el CTA)</span>
+              <input type="text" id="prod-short" placeholder="el journal">
+            </label>
+            <label class="config-field"><span>URL del producto</span>
+              <input type="url" id="prod-url" placeholder="https://stan.store/...">
+            </label>
+            <label class="config-field"><span>Descripción</span>
+              <input type="text" id="prod-desc" placeholder="Una línea para el LLM">
+            </label>
+            <label class="config-field"><span>Precio USD</span>
+              <input type="number" id="prod-price" min="0" step="1" value="0">
+            </label>
+            <label class="config-field"><span>Estilo de CTA</span>
+              <select id="prod-cta">
+                <option value="short">short — directo</option>
+                <option value="invitation">invitation — invitación suave</option>
+                <option value="question">question — cierre con pregunta</option>
+                <option value="full">full — frase completa con descripción</option>
+              </select>
+            </label>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:0.75rem">
+            <button class="btn btn-primary" id="btn-save-product">Guardar producto</button>
+            <button class="btn btn-secondary" id="btn-reset-product-form">Limpiar</button>
+          </div>
+        </div>
+      </section>
+
       <!-- CONFIGURACIÓN -->
       <section id="configuracion" class="section">
         <div class="page-header">
@@ -211,6 +276,6 @@
   </div>
 
   <div class="toast-container" id="toast-container"></div>
-  <script src="/static/js/dashboard.js?v=2"></script>
+  <script src="/static/js/dashboard.js?v=3"></script>
 </body>
 </html>
