@@ -11,10 +11,24 @@ from typing import Any
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
+# Compatibilidad MoviePy 1.x ↔ Pillow ≥10: Pillow eliminó Image.ANTIALIAS pero
+# MoviePy 1.x todavía lo usa en .resize(). Restauramos el alias antes de que
+# moviepy se importe en cualquier parte del pipeline.
+if not hasattr(Image, "ANTIALIAS"):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS  # type: ignore[attr-defined]
+
 from utils.config import ensure_dir, get_settings
 from utils.media import create_gradient_background, _load_font
+from utils.subtitles import build_cues, cues_to_srt
 
 logger = logging.getLogger(__name__)
+
+# Estilo del overlay de subtítulos (alineado con rag/knowledge/guion-video.md).
+SUBTITLE_FONT_SIZE = 46
+SUBTITLE_MAX_LINE_WIDTH = 900  # px sobre lienzo 1080×1920
+SUBTITLE_Y_POSITION = 1100  # safe zone central-baja (entre 900 y 1500)
+SUBTITLE_BOX_OPACITY = 0.40
+SUBTITLE_FADE_SECONDS = 0.2
 
 
 class VideoPipeline:
@@ -136,23 +150,16 @@ class VideoPipeline:
             video = video.subclip(0, min(video.duration, duration)).loop(duration=duration)
             video = video.set_audio(audio.subclip(0, duration))
 
-            phrases = [p.strip() for p in script.split("\n") if p.strip()]
-            if not phrases:
-                phrases = [script[:80]]
+            cues = build_cues(audio_path, script, fallback_duration=duration)
+            if not cues:
+                cues = build_cues(None, script or "", fallback_duration=duration)
+            self._write_srt(cues, out_path)
 
             clips = [video]
-            seg = duration / len(phrases)
-            for i, phrase in enumerate(phrases):
-                try:
-                    txt = (
-                        TextClip(phrase, fontsize=48, color="white", font="Arial-Bold", method="caption", size=(900, None))
-                        .set_position(("center", 1400))
-                        .set_start(i * seg)
-                        .set_duration(seg)
-                    )
-                    clips.append(txt)
-                except Exception:
-                    pass
+            for cue in cues:
+                cue_clip = self._make_subtitle_clip(cue.text, cue.start, cue.duration, duration)
+                if cue_clip is not None:
+                    clips.append(cue_clip)
 
             final = CompositeVideoClip(clips).set_duration(duration)
             final.write_videofile(
@@ -169,18 +176,132 @@ class VideoPipeline:
             logger.warning("MoviePy falló, usando fallback FFmpeg: %s", exc)
             self._compose_fallback(audio_path, script, theme, script[:80], out_path)
 
+    def _render_subtitle_png(self, text: str) -> Image.Image:
+        """Renderiza un overlay PIL con caja semi-transparente + texto blanco.
+
+        Devuelve una imagen RGBA del ancho del lienzo (1080) — alto justo para el
+        texto + padding. No depende de ImageMagick.
+        """
+        font = _load_font(SUBTITLE_FONT_SIZE, "DejaVu Sans", "DejaVu Sans")
+        # Wrap manual hasta SUBTITLE_MAX_LINE_WIDTH.
+        tmp = Image.new("RGBA", (10, 10))
+        draw = ImageDraw.Draw(tmp)
+        words = text.split()
+        lines: list[str] = []
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            bbox = draw.textbbox((0, 0), candidate, font=font)
+            if bbox[2] - bbox[0] <= SUBTITLE_MAX_LINE_WIDTH:
+                current = candidate
+            else:
+                if current:
+                    lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+
+        line_height = SUBTITLE_FONT_SIZE + 8
+        pad_x, pad_y = 28, 18
+        text_w = max(
+            (draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0])
+            for line in lines
+        )
+        text_h = len(lines) * line_height
+        box_w = min(1080 - 60, text_w + 2 * pad_x)
+        box_h = text_h + 2 * pad_y
+
+        img = Image.new("RGBA", (1080, box_h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        box_x = (1080 - box_w) // 2
+        d.rectangle(
+            [box_x, 0, box_x + box_w, box_h],
+            fill=(0, 0, 0, int(SUBTITLE_BOX_OPACITY * 255)),
+        )
+        # Texto blanco con sombra negra suave para legibilidad extra.
+        y = pad_y
+        for line in lines:
+            bbox = d.textbbox((0, 0), line, font=font)
+            line_w = bbox[2] - bbox[0]
+            x = (1080 - line_w) // 2
+            d.text((x + 2, y + 2), line, font=font, fill=(0, 0, 0, 220))
+            d.text((x, y), line, font=font, fill=(255, 255, 255, 255))
+            y += line_height
+        return img
+
+    def _make_subtitle_clip(
+        self, text: str, start: float, duration: float, video_duration: float
+    ):
+        """Crea un ImageClip con el overlay del subtítulo (PIL, sin ImageMagick)."""
+        try:
+            import numpy as np
+            from moviepy.editor import ImageClip
+
+            duration = max(0.6, min(duration, video_duration - start))
+            if duration <= 0:
+                return None
+
+            pil_img = self._render_subtitle_png(text)
+            clip = (
+                ImageClip(np.array(pil_img))
+                .set_position(("center", SUBTITLE_Y_POSITION))
+                .set_start(start)
+                .set_duration(duration)
+            )
+            if duration > 2 * SUBTITLE_FADE_SECONDS:
+                try:
+                    clip = clip.crossfadein(SUBTITLE_FADE_SECONDS).crossfadeout(
+                        SUBTITLE_FADE_SECONDS
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+            return clip
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Overlay de subtítulo falló para '%s...': %s", text[:30], exc)
+            return None
+
+    def _write_srt(self, cues, video_path: Path) -> None:
+        """Guarda los subtítulos junto al video (útil para upload manual en IG/YT)."""
+        if not cues:
+            return
+        try:
+            srt_path = video_path.with_suffix(".srt")
+            srt_path.write_text(cues_to_srt(cues), encoding="utf-8")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("No se pudo escribir SRT: %s", exc)
+
     def _compose_fallback(
         self, audio_path: str | None, script: str, theme: str, message: str, out_path: Path
     ) -> None:
+        # Fondo limpio: los subtítulos sincronizados van encima como overlay.
+        # El mensaje principal se reserva para el primer plano (hook visual).
         frame_path = self.output_dir / "frame.jpg"
         bg = create_gradient_background(1080, 1920, theme)
         draw = ImageDraw.Draw(bg)
-        font = _load_font(48, "Playfair Display", "DejaVu Serif")
-        lines = [line.strip() for line in script.split("\n") if line.strip()][:6]
-        y = 800
-        for line in lines:
-            draw.text((80, y), line[:60], font=font, fill="#FFFFFF")
-            y += 70
+        hook_font = _load_font(58, "Playfair Display", "DejaVu Serif")
+        # Hook visual breve en el tercio superior (mejora retención los primeros 2s).
+        hook = (message or "").strip()
+        if hook:
+            wrapped_lines: list[str] = []
+            words = hook.split()
+            current = ""
+            for word in words:
+                candidate = f"{current} {word}".strip()
+                if draw.textbbox((0, 0), candidate, font=hook_font)[2] <= 900:
+                    current = candidate
+                else:
+                    if current:
+                        wrapped_lines.append(current)
+                    current = word
+            if current:
+                wrapped_lines.append(current)
+            y = 380
+            for line in wrapped_lines[:4]:
+                bbox = draw.textbbox((0, 0), line, font=hook_font)
+                tx = (1080 - (bbox[2] - bbox[0])) // 2
+                draw.text((tx + 2, y + 2), line, font=hook_font, fill="#000000")
+                draw.text((tx, y), line, font=hook_font, fill="#FFFFFF")
+                y += 70
         bg.save(frame_path, "JPEG", quality=90)
 
         duration = 25.0
@@ -191,7 +312,9 @@ class VideoPipeline:
             except Exception:
                 pass
 
-        if self._compose_with_moviepy_image(frame_path, audio_path, duration, out_path):
+        if self._compose_with_moviepy_image(
+            frame_path, audio_path, duration, out_path, script=script
+        ):
             return
 
         audio_input = audio_path or str(self.output_dir / "narration.wav")
@@ -211,18 +334,40 @@ class VideoPipeline:
         except (subprocess.CalledProcessError, FileNotFoundError) as exc:
             logger.warning("FFmpeg no disponible: %s", exc)
             raise RuntimeError("No se pudo generar video (MoviePy/FFmpeg)") from exc
+        # En esta ruta no se anima el overlay, pero sí dejamos el .srt al lado
+        # del video para que se pueda subir manualmente en IG/YT/TikTok.
+        cues = build_cues(audio_path, script, fallback_duration=duration)
+        self._write_srt(cues, out_path)
 
     def _compose_with_moviepy_image(
-        self, frame_path: Path, audio_path: str | None, duration: float, out_path: Path
+        self,
+        frame_path: Path,
+        audio_path: str | None,
+        duration: float,
+        out_path: Path,
+        script: str = "",
     ) -> bool:
         try:
-            from moviepy.editor import AudioFileClip, ImageClip
+            from moviepy.editor import AudioFileClip, CompositeVideoClip, ImageClip
 
-            clip = ImageClip(str(frame_path)).set_duration(duration).resize((1080, 1920))
+            base = ImageClip(str(frame_path)).set_duration(duration).resize((1080, 1920))
             if audio_path and Path(audio_path).exists():
                 audio = AudioFileClip(audio_path).subclip(0, min(duration, 40))
-                clip = clip.set_audio(audio)
-            clip.write_videofile(
+                base = base.set_audio(audio)
+
+            cues = build_cues(audio_path, script or "", fallback_duration=duration)
+            self._write_srt(cues, out_path)
+
+            clips = [base]
+            for cue in cues:
+                cue_clip = self._make_subtitle_clip(cue.text, cue.start, cue.duration, duration)
+                if cue_clip is not None:
+                    clips.append(cue_clip)
+
+            final = (
+                CompositeVideoClip(clips).set_duration(duration) if len(clips) > 1 else base
+            )
+            final.write_videofile(
                 str(out_path),
                 fps=30,
                 codec="libx264",
@@ -230,7 +375,7 @@ class VideoPipeline:
                 verbose=False,
                 logger=None,
             )
-            clip.close()
+            final.close()
             return out_path.exists() and out_path.stat().st_size > 0
         except Exception as exc:
             logger.warning("MoviePy image fallback falló: %s", exc)
