@@ -1,0 +1,45 @@
+services:
+  motivacion-agentes:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+      - CHROMA_PERSIST_DIR=/app/data/chroma
+      - PUBLICATION_QUEUE_DIR=/app/publication_queue
+    volumes:
+      - ./publication_queue:/app/publication_queue
+      - ./data/chroma:/app/data/chroma
+      - ./tmp:/app/tmp
+      - ./.env:/app/.env:ro
+    working_dir: /app
+
+  # Ejemplo: generación demo sin APIs
+  generate-demo:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - DEMO_MODE=true
+      - MOCK_MODE=true
+      - PYTHONPATH=/app
+    volumes:
+      - ./publication_queue:/app/publication_queue
+      - ./data/chroma:/app/data/chroma
+      - ./tmp:/app/tmp
+    command: ["generate", "--demo"]
+
+  # Scheduler en background (generación diaria)
+  scheduler:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./publication_queue:/app/publication_queue
+      - ./data/chroma:/app/data/chroma
+      - ./tmp:/app/tmp
+      - ./.env:/app/.env:ro
+    command: ["schedule"]
+    restart: unless-stopped

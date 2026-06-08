@@ -1,0 +1,29 @@
+# Core
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# LangChain / LangGraph
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langchain-community>=0.3.0
+langgraph>=0.2.0
+
+# RAG
+chromadb>=0.5.0
+
+# Media
+Pillow>=10.0.0
+moviepy>=1.0.3
+requests>=2.31.0
+
+# Scheduling
+APScheduler>=3.10.0
+
+# CLI
+click>=8.1.0
+rich>=13.7.0
+
+# TTS (optional ElevenLabs)
+elevenlabs>=1.0.0

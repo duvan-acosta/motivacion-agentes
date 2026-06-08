@@ -1,0 +1,44 @@
+# Copia de referencia — ver rag/knowledge/platforms-specs.yaml para el corpus RAG
+
+instagram:
+  feed:
+    width: 1080
+    height: 1080
+    format: jpg
+  reel:
+    width: 1080
+    height: 1920
+    format: mp4
+    max_duration_seconds: 90
+  caption_max_chars: 2200
+
+facebook:
+  post:
+    width: 1080
+    height: 1080
+  reel:
+    width: 1080
+    height: 1920
+  caption_max_chars: 63206
+
+tiktok:
+  video:
+    width: 1080
+    height: 1920
+  caption_max_chars: 2200
+
+youtube:
+  short:
+    width: 1080
+    height: 1920
+    max_duration_seconds: 60
+  thumbnail:
+    width: 1280
+    height: 720
+  title_max_chars: 100
+
+twitter:
+  image:
+    width: 1200
+    height: 675
+  tweet_max_chars: 280

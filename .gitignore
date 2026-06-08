@@ -1,0 +1,40 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# ChromaDB / vector store
+data/chroma/
+chroma_data/
+
+# Generated content
+publication_queue/
+
+# Media temp
+tmp/
+*.tmp
+*.wav
+*.mp3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/

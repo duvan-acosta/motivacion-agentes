@@ -1,0 +1,81 @@
+# Especificaciones técnicas por plataforma (RAG + referencia)
+
+instagram:
+  feed:
+    width: 1080
+    height: 1080
+    format: jpg
+    aspect_ratio: "1:1"
+  reel:
+    width: 1080
+    height: 1920
+    format: mp4
+    codec: h264
+    fps: 30
+    max_duration_seconds: 90
+  caption:
+    max_chars: 2200
+    hashtags_recommended: 15
+  best_times:
+    - "08:00"
+    - "12:00"
+    - "19:00"
+
+facebook:
+  post:
+    width: 1080
+    height: 1080
+    format: jpg
+  reel:
+    width: 1080
+    height: 1920
+    format: mp4
+    max_duration_seconds: 90
+  caption:
+    max_chars: 63206
+
+tiktok:
+  video:
+    width: 1080
+    height: 1920
+    format: mp4
+    max_duration_seconds: 180
+  caption:
+    max_chars: 2200
+    hashtags_recommended: 5
+
+youtube:
+  short:
+    width: 1080
+    height: 1920
+    format: mp4
+    max_duration_seconds: 60
+    hashtag_shorts: "#Shorts"
+  thumbnail:
+    width: 1280
+    height: 720
+    format: jpg
+  title:
+    max_chars: 100
+  description:
+    max_chars: 5000
+  tags:
+    max_count: 15
+
+twitter:
+  image:
+    width: 1200
+    height: 675
+    format: jpg
+    aspect_ratio: "16:9"
+  tweet:
+    max_chars: 280
+  hashtags_recommended: 3
+
+validation:
+  required_files:
+    instagram: [feed.jpg, reel.mp4, caption.txt, hashtags.txt]
+    tiktok: [video.mp4, caption.txt]
+    facebook: [post.jpg, reel.mp4, caption.txt]
+    youtube: [short.mp4, title.txt, description.txt, tags.txt]
+    twitter: [image.jpg, tweet.txt]

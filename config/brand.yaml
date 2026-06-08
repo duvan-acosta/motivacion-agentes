@@ -1,0 +1,48 @@
+brand:
+  name: "Reflexiones Serenas"
+  tagline: "Filosofía práctica para el día a día"
+  language: es
+  tone:
+    - sereno
+    - profundo
+    - accesible
+  avoid:
+    - clichés vacíos
+    - toxic positivity
+    - frases genéricas sin sustancia
+
+content:
+  posts_per_day: 1
+  reels_per_day: 1
+  themes_rotation:
+    - resiliencia
+    - calma
+    - claridad
+    - propósito
+    - gratitud
+    - presencia
+    - coraje
+    - sabiduría
+
+hashtags_base:
+  - "#filosofia"
+  - "#estoicismo"
+  - "#motivacion"
+  - "#reflexion"
+  - "#mindfulness"
+  - "#crecimientopersonal"
+  - "#vidaconsciente"
+  - "#sabiduria"
+
+visual:
+  font_family: "Playfair Display"
+  fallback_font: "DejaVu Serif"
+  text_color: "#FFFFFF"
+  gradient_opacity: 0.55
+  max_message_lines: 6
+
+video:
+  min_duration_seconds: 20
+  max_duration_seconds: 40
+  fps: 30
+  background_music_volume: 0.08

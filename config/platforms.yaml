@@ -1,0 +1,59 @@
+platforms:
+  instagram:
+    enabled: true
+    feed:
+      format: jpg
+      width: 1080
+      height: 1080
+    reel:
+      format: mp4
+      width: 1080
+      height: 1920
+      max_duration_seconds: 90
+    caption_max_chars: 2200
+    hashtags_max: 30
+
+  facebook:
+    enabled: true
+    post:
+      format: jpg
+      width: 1080
+      height: 1080
+    reel:
+      format: mp4
+      width: 1080
+      height: 1920
+      max_duration_seconds: 90
+    caption_max_chars: 63206
+
+  tiktok:
+    enabled: true
+    video:
+      format: mp4
+      width: 1080
+      height: 1920
+      max_duration_seconds: 180
+    caption_max_chars: 2200
+
+  youtube:
+    enabled: true
+    short:
+      format: mp4
+      width: 1080
+      height: 1920
+      max_duration_seconds: 60
+    thumbnail:
+      format: jpg
+      width: 1280
+      height: 720
+    title_max_chars: 100
+    description_max_chars: 5000
+    tags_max: 15
+
+  twitter:
+    enabled: true
+    image:
+      format: jpg
+      width: 1200
+      height: 675
+    tweet_max_chars: 280
