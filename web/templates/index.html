@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reflexiones Serenas — Panel Admin</title>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Reflexiones Serenas</h1>
+        <p>Panel de administración</p>
+      </div>
+      <nav>
+        <div class="nav-item active" data-section="inicio">
+          <span class="nav-icon">◈</span> Inicio
+        </div>
+        <div class="nav-item" data-section="agentes">
+          <span class="nav-icon">◎</span> Agentes
+        </div>
+        <div class="nav-item" data-section="servicios">
+          <span class="nav-icon">◇</span> Servicios
+        </div>
+        <div class="nav-item" data-section="material">
+          <span class="nav-icon">▣</span> Material generado
+        </div>
+        <div class="nav-item" data-section="estadisticas">
+          <span class="nav-icon">◉</span> Estadísticas
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <!-- INICIO -->
+      <section id="inicio" class="section active">
+        <div class="page-header">
+          <h2>Dashboard</h2>
+          <p>Resumen del sistema de contenido motivacional</p>
+        </div>
+        <div class="cards-grid">
+          <div class="stat-card"><div class="label">Total paquetes</div><div class="value" id="stat-total">—</div></div>
+          <div class="stat-card ready"><div class="label">Listos</div><div class="value" id="stat-ready">—</div></div>
+          <div class="stat-card pending"><div class="label">Pendientes</div><div class="value" id="stat-pending">—</div></div>
+          <div class="stat-card published"><div class="label">Publicados</div><div class="value" id="stat-published">—</div></div>
+          <div class="stat-card manual"><div class="label">Manual</div><div class="value" id="stat-manual">—</div></div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Actividad reciente</h3>
+            <ul class="activity-feed" id="activity-feed"></ul>
+          </div>
+          <div class="panel">
+            <h3>Estado de agentes</h3>
+            <div class="agent-grid" id="agent-indicators"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AGENTES -->
+      <section id="agentes" class="section">
+        <div class="page-header">
+          <h2>Agentes</h2>
+          <p>Gestión y ejecución del sistema multi-agente</p>
+        </div>
+        <div class="panel">
+          <div class="toggle-switch">
+            <input type="checkbox" id="demo-toggle">
+            <label for="demo-toggle">Modo demo (sin APIs externas)</label>
+          </div>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem">
+            <input type="text" id="theme-input" placeholder="Tema opcional (resiliencia, calma...)" style="flex:1;min-width:200px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-primary);padding:0.6rem 0.75rem;border-radius:8px">
+            <button class="btn btn-primary" id="btn-generate">Generar contenido</button>
+            <button class="btn btn-secondary" id="btn-workflow">Ejecutar workflow completo</button>
+          </div>
+        </div>
+        <div class="agent-grid" id="agents-grid"></div>
+        <div class="panel" style="margin-top:1.5rem">
+          <h3>Tareas en segundo plano</h3>
+          <div id="tasks-list"></div>
+        </div>
+      </section>
+
+      <!-- SERVICIOS -->
+      <section id="servicios" class="section">
+        <div class="page-header">
+          <h2>Servicios</h2>
+          <p>Estado de APIs externas y configuración</p>
+        </div>
+        <div class="panel">
+          <h3>APIs y credenciales</h3>
+          <div class="service-list" id="services-list"></div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Scheduler</h3>
+            <div id="scheduler-info"></div>
+          </div>
+          <div class="panel">
+            <h3>Servicios Docker</h3>
+            <div id="docker-services"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MATERIAL -->
+      <section id="material" class="section">
+        <div class="page-header">
+          <h2>Material generado</h2>
+          <p>Explorar paquetes en publication_queue</p>
+        </div>
+        <div class="filters">
+          <select id="filter-date"><option value="">Todas las fechas</option></select>
+          <select id="filter-status">
+            <option value="">Todos los estados</option>
+            <option value="ready">Listo</option>
+            <option value="pending">Pendiente</option>
+            <option value="published">Publicado</option>
+            <option value="manual">Manual</option>
+            <option value="failed">Fallido</option>
+          </select>
+        </div>
+        <div class="panel" style="overflow-x:auto">
+          <table class="packages-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Paquete</th>
+                <th>Tema</th>
+                <th>Estado</th>
+                <th>Generado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="packages-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ESTADÍSTICAS -->
+      <section id="estadisticas" class="section">
+        <div class="page-header">
+          <h2>Estadísticas y tendencias</h2>
+          <p>Métricas de redes sociales</p>
+        </div>
+        <div class="demo-banner" id="analytics-demo-banner" style="display:none">
+          ⚠ Datos de demostración — conecta las APIs en Servicios para métricas reales
+        </div>
+        <div class="platform-metrics-grid" id="platform-metrics"></div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Crecimiento de seguidores</h3>
+            <div class="chart-container"><canvas id="chart-followers"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3>Tasa de engagement</h3>
+            <div class="chart-container"><canvas id="chart-engagement"></canvas></div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Publicaciones por día</h3>
+            <div class="chart-container"><canvas id="chart-posts"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3>Top hashtags</h3>
+            <div id="top-hashtags"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal detalle paquete -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Paquete</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <img class="preview-large" id="modal-preview" alt="Vista previa">
+      <div id="modal-body"></div>
+      <div style="margin-top:1rem;display:flex;gap:0.5rem">
+        <button class="btn btn-primary" id="modal-publish-btn">Publicar</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

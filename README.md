@@ -90,11 +90,55 @@ python -m cli schedule
 python scripts/publish_retry.py
 ```
 
+## Panel web de administración
+
+Interfaz web en español para administrar agentes, servicios, material generado y estadísticas.
+
+```bash
+# Levantar panel web (puerto 8080)
+docker compose up -d web
+
+# O en local (tras pip install -r requirements.txt)
+python -m web
+```
+
+Abre **http://localhost:8080** en el navegador.
+
+### Secciones del panel
+
+| Sección | Funcionalidad |
+|---------|---------------|
+| **Inicio** | Resumen de paquetes, actividad reciente, estado de agentes |
+| **Agentes** | Lista de 5 agentes, RAG, generar contenido, workflow completo, modo demo |
+| **Servicios** | Salud de APIs (OpenAI, Pexels, Meta, etc.), scheduler, Docker |
+| **Material generado** | Explorar `publication_queue`, previsualizar, descargar, publicar |
+| **Estadísticas** | Métricas por plataforma, gráficos de tendencias (demo sin APIs) |
+
+### API REST
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/dashboard/summary` | Resumen del dashboard |
+| GET | `/api/agents` | Lista de agentes y tareas |
+| POST | `/api/agents/generate` | Iniciar generación en background |
+| POST | `/api/agents/workflow` | Ejecutar workflow completo |
+| POST | `/api/agents/demo-mode` | Activar/desactivar modo demo |
+| GET | `/api/services/health` | Estado de servicios y API keys |
+| GET | `/api/content/packages` | Listar paquetes generados |
+| GET | `/api/content/packages/{id}` | Detalle de un paquete |
+| POST | `/api/content/packages/{id}/publish` | Publicar paquete |
+| GET | `/api/content/packages/{id}/download` | Descargar ZIP del paquete |
+| GET | `/api/analytics/platforms` | Métricas por plataforma |
+| GET | `/api/analytics/trends` | Tendencias y gráficos |
+
 ## Docker
 
 ```bash
 # Construir imagen
 docker compose build
+
+# Panel web + scheduler
+docker compose up -d web scheduler
 
 # Generación demo (sin APIs)
 docker compose run --rm generate-demo
@@ -104,11 +148,11 @@ docker compose run --rm motivacion-agentes generate --demo
 docker compose run --rm motivacion-agentes status
 docker compose run --rm motivacion-agentes publish publication_queue/FECHA/CONTENIDO_ID
 
-# Scheduler en background
+# Scheduler en background (generación diaria)
 docker compose up -d scheduler
 ```
 
-La imagen incluye **FFmpeg**, Python 3.11 y todas las dependencias. Los volúmenes montados persisten `publication_queue/` y `data/chroma/`.
+La imagen incluye **FFmpeg**, Python 3.11 y todas las dependencias. Los volúmenes montados persisten `publication_queue/`, `data/chroma/` y `data/analytics/`.
 
 ## Variables de entorno
 
@@ -174,6 +218,8 @@ motivacion-agentes/
 ├── publishing/       # Adaptadores API por plataforma
 ├── rag/              # ChromaDB + knowledge base
 ├── scheduler/        # APScheduler
+├── web/              # Panel FastAPI + dashboard
+├── data/analytics/   # Snapshots de métricas
 ├── scripts/          # publish_retry.py
 ├── utils/            # Config, demo mode, media helpers
 ├── Dockerfile
