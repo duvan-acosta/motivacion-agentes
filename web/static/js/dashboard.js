@@ -68,6 +68,7 @@ async function loadSection(id) {
       case "servicios": await loadServices(); break;
       case "material": await loadMaterial(); break;
       case "estadisticas": await loadAnalytics(); break;
+      case "configuracion": await loadConfig(); break;
     }
   } catch (e) {
     toast("Error al cargar datos: " + e.message, "error");
@@ -329,10 +330,86 @@ async function toggleDemoMode() {
   toast(`Modo ${enabled ? "demo" : "producción"} activado`, "info");
 }
 
+let configData = null;
+
+async function loadConfig() {
+  configData = await api("/api/config");
+  const pathEl = document.getElementById("env-path");
+  if (pathEl) pathEl.textContent = configData.env_path || ".env";
+
+  document.getElementById("config-groups").innerHTML = configData.groups.map((group) => `
+    <div class="panel config-group">
+      <h3>${group.label}</h3>
+      <div class="config-fields">
+        ${group.fields.map((f) => renderConfigField(f)).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderConfigField(field) {
+  const id = `cfg-${field.key}`;
+  if (field.type === "select") {
+    return `
+      <label class="config-field" for="${id}">
+        <span>${field.label}</span>
+        <select id="${id}" data-key="${field.key}">
+          ${(field.options || []).map((o) =>
+            `<option value="${o}" ${field.value === o ? "selected" : ""}>${o}</option>`
+          ).join("")}
+        </select>
+      </label>`;
+  }
+  if (field.type === "secret") {
+    const hint = field.configured ? `<small class="config-hint">Actual: ${field.masked}</small>` : "";
+    return `
+      <label class="config-field" for="${id}">
+        <span>${field.label} ${field.configured ? '<span class="badge badge-ok">configurada</span>' : '<span class="badge badge-missing">vacía</span>'}</span>
+        <input type="password" id="${id}" data-key="${field.key}" placeholder="${field.configured ? "Dejar vacío para mantener" : "Ingresar clave"}" autocomplete="off">
+        ${hint}
+      </label>`;
+  }
+  return `
+    <label class="config-field" for="${id}">
+      <span>${field.label}</span>
+      <input type="${field.type === "number" ? "number" : "text"}" id="${id}" data-key="${field.key}" value="${field.value || ""}">
+    </label>`;
+}
+
+async function saveConfig() {
+  const values = {};
+  document.querySelectorAll("#config-groups [data-key]").forEach((el) => {
+    const key = el.dataset.key;
+    const val = el.value.trim();
+    if (val) values[key] = val;
+  });
+  const res = await api("/api/config", { method: "POST", body: JSON.stringify({ values }) });
+  toast(res.message, res.ok ? "success" : "error");
+  if (res.ok) {
+    await loadConfig();
+    loadServices();
+  }
+}
+
+function toggleMobileMenu(open) {
+  document.getElementById("sidebar").classList.toggle("open", open);
+  document.getElementById("mobile-overlay").classList.toggle("open", open);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".nav-item").forEach((item) => {
-    item.addEventListener("click", () => navTo(item.dataset.section));
+    item.addEventListener("click", () => {
+      navTo(item.dataset.section);
+      toggleMobileMenu(false);
+    });
   });
+  document.getElementById("mobile-menu-btn").addEventListener("click", () => {
+    const sidebar = document.getElementById("sidebar");
+    toggleMobileMenu(!sidebar.classList.contains("open"));
+  });
+  document.getElementById("mobile-overlay").addEventListener("click", () => toggleMobileMenu(false));
+  document.getElementById("btn-save-config").addEventListener("click", saveConfig);
+  document.getElementById("btn-reload-config").addEventListener("click", loadConfig);
   document.getElementById("btn-generate").addEventListener("click", triggerGenerate);
   document.getElementById("btn-workflow").addEventListener("click", triggerWorkflow);
   document.getElementById("demo-toggle").addEventListener("change", toggleDemoMode);
