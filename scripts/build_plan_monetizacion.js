@@ -62,6 +62,26 @@ const num = (text) =>
     children: [new TextRun({ text, font: FONT, size: 22 })],
   });
 
+// Checkbox visual (☐ U+2610). El usuario puede sustituirlo manualmente por ☑.
+const check = (text) =>
+  new Paragraph({
+    spacing: { after: 80 },
+    indent: { left: 360 },
+    children: [
+      new TextRun({ text: "☐  ", font: FONT, size: 24 }),
+      new TextRun({ text, font: FONT, size: 22 }),
+    ],
+  });
+
+// Sub-cabecera dentro de la sección de checklist.
+const subhead = (text) =>
+  new Paragraph({
+    spacing: { before: 240, after: 80 },
+    children: [
+      new TextRun({ text, font: FONT, size: 22, bold: true, color: "555555" }),
+    ],
+  });
+
 // Table helpers ---------------------------------------------------------------
 const border = { style: BorderStyle.SINGLE, size: 4, color: "BFBFBF" };
 const borders = { top: border, bottom: border, left: border, right: border };
@@ -354,8 +374,123 @@ const cost = [
   ),
 ];
 
-const closing = [
+const checklist = [
   new Paragraph({ children: [new PageBreak()] }),
+  h1("Checklist de ejecución — orden cronológico"),
+  p(
+    "Esta lista ordena las actividades del plan por el momento en que conviene ejecutarlas. Marca cada casilla a medida que la completes (sustituye ☐ por ☑ en Word con clic derecho → Editar)."
+  ),
+
+  h2("Semana 1 — Infraestructura previa a publicar"),
+  subhead("Día 1 — Cuentas y marca"),
+  check("Crear/activar @mentalequilibrio en TikTok, Instagram, YouTube, Facebook y X"),
+  check("Verificar disponibilidad del handle; si está tomado, ajustar config/brand.yaml"),
+  check("Foto de perfil y biografía coherentes con la voz de marca (sin emojis decorativos)"),
+  check("Registrar cuenta en Stan Store o Beacons (link in bio + tienda) con mentalequilibrio18@gmail.com"),
+  check("Registrar cuenta en Kit (ConvertKit) — plan gratis hasta 10 000 suscriptores"),
+
+  subhead("Día 2-3 — Primer producto digital: pack de wallpapers"),
+  check("Generar 30 imágenes con el sistema (modo demo o producción) y seleccionar las mejores"),
+  check("Exportar en 4K vertical (2160×3840)"),
+  check("Crear cover atractiva del pack (mockup en iPhone)"),
+  check("Configurar producto en Stan Store: precio 7 USD, descripción de 3 líneas"),
+  check("Anotar la URL final del producto"),
+
+  subhead("Día 4-5 — Segundo producto digital: journal 30 días"),
+  check("Redactar 30 preguntas reflexivas (una por día) usando el RAG de filosofía como inspiración"),
+  check("Maquetar en PDF interactivo (Canva, Affinity Publisher o InDesign)"),
+  check("Añadir página de bienvenida y portada"),
+  check("Configurar producto en Stan Store: precio 12 USD"),
+  check("Anotar la URL final"),
+
+  subhead("Día 6 — Lead magnet y captura de email"),
+  check("Diseñar lead magnet: PDF gratis con 7 reflexiones de la marca"),
+  check("Configurar formulario opt-in en Kit con email del nuevo suscriptor"),
+  check("Subir lead magnet como entrega automática post-suscripción"),
+  check("Diseñar secuencia de bienvenida de 3 emails (día 0, día 2, día 5)"),
+  check("Añadir enlace al opt-in en el link in bio (Stan Store soporta múltiples botones)"),
+
+  subhead("Día 7 — Configuración técnica del sistema"),
+  check("Actualizar config/products.yaml con las URLs reales de los productos"),
+  check("Verificar que active_product_id apunta a wallpapers_pack (primero a vender)"),
+  check("Configurar OPENAI_API_KEY en .env (o mantener MOCK_MODE)"),
+  check("Configurar PEXELS_API_KEY para video real en lugar del gradiente"),
+  check("Ejecutar python -m cli generate --demo y revisar el paquete completo"),
+  check("Verificar que el CTA aparece bien en el caption de cada plataforma"),
+  check("Verificar que el .srt acompaña al reel.mp4"),
+
+  h2("Mes 1-3 — Construcción de audiencia (Fase 1)"),
+  subhead("Publicación diaria"),
+  check("Generar contenido diariamente con python -m cli generate o desde el panel /agentes"),
+  check("Publicar 1-2 veces al día en TikTok (mayor potencial de descubrimiento)"),
+  check("Cross-postear el mismo video en Instagram Reels (sin watermark de TikTok)"),
+  check("Cross-postear en YouTube Shorts con #Shorts en título o descripción"),
+  check("Subir 3-5 imágenes con frase en Pinterest por semana (tráfico evergreen)"),
+  check("Cross-postear en Facebook Reels los días alternos"),
+
+  subhead("Monetización activa desde el día uno"),
+  check("Incluir enlaces de afiliados Amazon en captions (rotar 3-5 libros por semana)"),
+  check("Mantener el producto wallpapers visible en el link in bio"),
+  check("Mencionar el lead magnet gratuito en stories y en el CTA del caption ocasional"),
+
+  subhead("Iteración semanal"),
+  check("Revisar métricas cada lunes: views, saves, shares, CTR al bio"),
+  check("Identificar los 3 mejores posts de la semana y analizar qué tienen en común"),
+  check("Ajustar producto activo en el panel /productos si conviene rotar"),
+  check("Renovar set de hashtags cada 2 semanas (evitar penalización por repetición)"),
+
+  subhead("Hitos del primer trimestre"),
+  check("Día 30: 30 publicaciones + primera venta de wallpaper"),
+  check("Día 60: 1 000 seguidores en alguna plataforma + 5 ventas digitales"),
+  check("Día 90: 2 500 seguidores acumulados + primeros suscriptores email"),
+
+  h2("Mes 3-6 — Monetización nativa (Fase 2)"),
+  subhead("Activación de programas de pago"),
+  check("Al cruzar 10 000 seguidores en TikTok: activar Creator Rewards"),
+  check("Al cruzar 1 000 subs en YouTube: activar Partner Program (Shorts)"),
+  check("Activar Facebook Reels Performance Bonus si está disponible en tu país"),
+
+  subhead("Lanzamiento del producto core"),
+  check("Definir título y promesa del curso (sugerido: «Filosofía práctica para días caóticos»)"),
+  check("Grabar las 7 lecciones en video (máximo 10 min cada una)"),
+  check("Subir el curso a Hotmart o Teachable; precio inicial 47 USD"),
+  check("Diseñar secuencia de lanzamiento: 5 días de contenido pre-lanzamiento + 3 emails"),
+  check("Lanzar el curso con descuento de 7 días (early bird)"),
+  check("Si supera 10 ventas en 14 días: subir precio a 67-97 USD"),
+
+  subhead("Sponsorships iniciales"),
+  check("Identificar 5 marcas afines (apps wellness, editoriales independientes, café de especialidad)"),
+  check("Enviar email pitch a cada una con métricas y kit de marca"),
+  check("Cerrar el primer sponsorship cuando rondes 15 000-20 000 seguidores"),
+
+  h2("Mes 6-12 — Negocio consolidado (Fase 3)"),
+  check("Lanzar membresía mensual 7-12 USD (Stan Store o Patreon)"),
+  check("Diseñar tier único con: comunidad cerrada + audios largos + reflexión semanal en directo"),
+  check("Compilar contenido acumulado en libro físico vía Amazon KDP"),
+  check("Evaluar curso ampliado (149-297 USD) con sesiones grupales o cohorts"),
+  check("Mantener 2-3 sponsorships rotativos al mes"),
+
+  h2("Revisión continua — todos los meses"),
+  check("Crecimiento neto de seguidores por canal (descontar bajas)"),
+  check("CTR del link in bio (objetivo mínimo 2%)"),
+  check("Ventas por producto (cuál es el top, cuál descontinuar)"),
+  check("Nuevos suscriptores email y tasa de apertura del último envío"),
+  check("Lista de los 5 posts más performantes y qué tienen en común"),
+  check("Costos operativos del mes (debe quedarse entre 6 y 25 USD)"),
+  check("Backup del directorio publication_queue y data/chroma"),
+
+  h2("Acciones técnicas continuas"),
+  check("Mantener producto activo coherente con la temporada o lanzamiento desde el panel /productos"),
+  check("Rotar afiliados de libros cada 30 días en los captions"),
+  check("Revisar manifest.json y status.json de paquetes para detectar publicaciones fallidas"),
+  check("Reintentar publicaciones pendientes con python scripts/publish_retry.py"),
+  check("Actualizar el RAG (rag/knowledge/*) con aprendizajes del mes"),
+  check("Revisar nuevas piezas técnicas pendientes: hooks A/B, captions por plataforma, música ambient"),
+
+  new Paragraph({ children: [new PageBreak()] }),
+];
+
+const closing = [
   h1("Indicadores de éxito por fase"),
   buildTable(
     [1400, 3000, 4960],
@@ -462,6 +597,7 @@ const doc = new Document({
         ...ranges,
         ...tech,
         ...cost,
+        ...checklist,
         ...closing,
       ],
     },
@@ -471,6 +607,18 @@ const doc = new Document({
 const outDir = path.resolve(__dirname, "..");
 const outPath = path.join(outDir, "Plan_Monetizacion.docx");
 Packer.toBuffer(doc).then((buffer) => {
-  fs.writeFileSync(outPath, buffer);
-  console.log("OK ->", outPath);
+  try {
+    fs.writeFileSync(outPath, buffer);
+    console.log("OK ->", outPath);
+  } catch (err) {
+    if (err.code === "EBUSY") {
+      const fallback = path.join(outDir, "Plan_Monetizacion_NEW.docx");
+      fs.writeFileSync(fallback, buffer);
+      console.log("Plan_Monetizacion.docx estaba abierto en Word.");
+      console.log("Se generó la versión nueva como ->", fallback);
+      console.log("Cierra el archivo viejo y renombra el _NEW para reemplazarlo.");
+    } else {
+      throw err;
+    }
+  }
 });
