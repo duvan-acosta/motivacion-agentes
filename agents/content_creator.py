@@ -10,6 +10,7 @@ from typing import Any
 from rag.store import get_rag_store
 from utils.config import get_settings, load_yaml
 from utils.demo_mode import pick_demo_content
+from utils.products import cta_context_for_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,23 @@ class ContentCreatorAgent:
         filosofia = "\n---\n".join(filosofia_ctx[:4])
         brand = "\n---\n".join(brand_ctx[:4])
         algoritmo = "\n---\n".join(algoritmo_ctx[:2])
+
+        cta = cta_context_for_prompt()
+        if cta.get("has_product"):
+            cta_block = f"""
+Producto activo a promover suavemente al final del caption (NO en el mensaje
+de imagen, NO en hashtags):
+- Nombre: {cta['product_name']}
+- Cómo nombrarlo en el texto: "{cta['product_short_name']}"
+- Descripción: {cta['product_description']}
+- Estilo de CTA: {cta['cta_style']}
+
+El cierre del caption debe invitar (sin agresividad, manteniendo voz de marca)
+a conocer el producto. La URL la añade el sistema; tú solo escribes la
+invitación. No uses imperativos huecos como "¡compra ya!" ni "no te lo pierdas".
+"""
+        else:
+            cta_block = ""
         return f"""Eres redactor de Reflexiones Serenas, una marca de filosofía
 práctica en español. Tono: sereno, lúcido, sin clichés motivacionales.
 
@@ -44,7 +62,7 @@ Voz de marca y plantillas (hooks, cierres, vocabulario):
 
 Señales de algoritmo a tener en cuenta para Instagram:
 {algoritmo}
-
+{cta_block}
 Reglas innegociables:
 - ORIGINALIDAD: nada de citas atribuidas (Buda, Marco Aurelio, Einstein…).
 - PROHIBIDAS literalmente: "vibras", "energías", "manifestar", "tu mejor versión",

@@ -14,6 +14,7 @@ from PIL import Image
 from rag.store import get_rag_store
 from utils.config import ensure_dir, get_settings, load_yaml
 from utils.demo_mode import demo_tweet, demo_youtube_meta
+from utils.products import get_active_product, render_cta
 
 logger = logging.getLogger(__name__)
 
@@ -65,33 +66,47 @@ class PublisherAgent:
         )
 
         hashtag_text = " ".join(hashtags)
+        product = get_active_product()
+
+        def _with_cta(text: str, platform: str) -> str:
+            if not product:
+                return text
+            cta = render_cta(product, platform, content_id=content_id)
+            return f"{text.rstrip()}\n\n{cta}"
+
         ig_dir = ensure_dir(base / "instagram")
         self._copy_if_exists(images.get("instagram_feed"), ig_dir / "feed.jpg")
         self._copy_if_exists(video_path, ig_dir / "reel.mp4")
-        (ig_dir / "caption.txt").write_text(caption, encoding="utf-8")
+        (ig_dir / "caption.txt").write_text(_with_cta(caption, "instagram"), encoding="utf-8")
         (ig_dir / "hashtags.txt").write_text(hashtag_text, encoding="utf-8")
 
         tt_dir = ensure_dir(base / "tiktok")
         self._copy_if_exists(video_path, tt_dir / "video.mp4")
-        tt_caption = f"{message}\n\n{hashtag_text}"[:2200]
-        (tt_dir / "caption.txt").write_text(tt_caption, encoding="utf-8")
+        tt_caption = f"{message}\n\n{hashtag_text}"[:2000]
+        (tt_dir / "caption.txt").write_text(_with_cta(tt_caption, "tiktok"), encoding="utf-8")
 
         fb_dir = ensure_dir(base / "facebook")
         self._copy_if_exists(images.get("facebook_post"), fb_dir / "post.jpg")
         self._copy_if_exists(video_path, fb_dir / "reel.mp4")
-        (fb_dir / "caption.txt").write_text(caption, encoding="utf-8")
+        (fb_dir / "caption.txt").write_text(_with_cta(caption, "facebook"), encoding="utf-8")
 
         yt_dir = ensure_dir(base / "youtube")
         self._copy_if_exists(video_path, yt_dir / "short.mp4")
         self._copy_if_exists(images.get("youtube_thumb"), yt_dir / "thumbnail.jpg")
         yt = demo_youtube_meta(message, theme)
         (yt_dir / "title.txt").write_text(yt["title"], encoding="utf-8")
-        (yt_dir / "description.txt").write_text(yt["description"], encoding="utf-8")
+        (yt_dir / "description.txt").write_text(
+            _with_cta(yt["description"], "youtube"), encoding="utf-8"
+        )
         (yt_dir / "tags.txt").write_text(yt["tags"], encoding="utf-8")
 
         tw_dir = ensure_dir(base / "twitter")
         self._copy_if_exists(images.get("twitter_image"), tw_dir / "image.jpg")
-        (tw_dir / "tweet.txt").write_text(demo_tweet(message, theme), encoding="utf-8")
+        # En X la URL clicable va en el tweet; reservamos ~70 chars del límite.
+        tweet_base = demo_tweet(message, theme)
+        if product:
+            tweet_base = tweet_base[:200]  # deja espacio para el CTA + URL
+        (tw_dir / "tweet.txt").write_text(_with_cta(tweet_base, "twitter"), encoding="utf-8")
 
         manifest = self._build_manifest(base)
         # Sugerencias del RAG de algoritmo, una por plataforma. Útil para que un
@@ -100,6 +115,13 @@ class PublisherAgent:
         for platform in manifest["platforms"]:
             tips = self.rag.query("algoritmo", f"{platform} hook CTA hashtags señales")
             manifest["platforms"][platform]["algorithm_tips"] = tips[:2]
+        if product:
+            manifest["promoted_product"] = {
+                "id": product.id,
+                "name": product.name,
+                "url": product.url,
+                "cta_style": product.cta_style,
+            }
         (base / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )

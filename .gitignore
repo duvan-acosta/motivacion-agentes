@@ -47,3 +47,6 @@ _build.log
 _generate-demo.log
 _status.log
 _status.txt
+
+# Business documents generated locally (no compartir en repo)
+Plan_Monetizacion.docx
