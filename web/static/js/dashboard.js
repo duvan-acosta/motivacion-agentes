@@ -344,8 +344,50 @@ async function loadConfig() {
       <div class="config-fields">
         ${group.fields.map((f) => renderConfigField(f)).join("")}
       </div>
+      <div style="margin-top:0.75rem;display:flex;justify-content:flex-end">
+        <button class="btn btn-secondary" data-save-group="${group.id}">
+          Guardar este bloque
+        </button>
+      </div>
     </div>
   `).join("");
+
+  // Cada botón guarda solo su grupo. Permite actualizar la API de una red
+  // social sin tener que rellenar las demás keys.
+  document.querySelectorAll("[data-save-group]").forEach((btn) => {
+    btn.addEventListener("click", () => saveConfigGroup(btn.dataset.saveGroup));
+  });
+}
+
+async function saveConfigGroup(groupId) {
+  if (!configData) return;
+  const group = configData.groups.find((g) => g.id === groupId);
+  if (!group) return;
+  const values = {};
+  for (const field of group.fields) {
+    const el = document.getElementById(`cfg-${field.key}`);
+    if (!el) continue;
+    const val = (el.value || "").trim();
+    if (!val) continue;  // vacío = no tocar el valor actual
+    values[field.key] = val;
+  }
+  if (Object.keys(values).length === 0) {
+    toast(`Sin cambios en "${group.label}"`, "info");
+    return;
+  }
+  try {
+    const res = await api("/api/config", {
+      method: "POST",
+      body: JSON.stringify({ values }),
+    });
+    toast(
+      res.ok ? `${group.label}: ${res.message}` : `Error: ${res.message}`,
+      res.ok ? "success" : "error"
+    );
+    if (res.ok) await loadConfig();
+  } catch (e) {
+    toast("Error al guardar: " + e.message, "error");
+  }
 }
 
 function renderConfigField(field) {
