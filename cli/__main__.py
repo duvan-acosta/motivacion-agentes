@@ -12,6 +12,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from graph.batch import run_wallpaper_batch
 from graph.workflow import MotivacionWorkflow, run_generation
 from scheduler.jobs import start_scheduler
 from utils.config import get_settings
@@ -121,6 +122,61 @@ def status(queue_dir: str | None) -> None:
         console.print("[dim]Sin paquetes generados aún. Ejecuta: python -m cli generate --demo[/dim]")
     else:
         console.print(table)
+
+
+@cli.command()
+@click.option("--count", "-n", default=30, type=int, help="Cantidad de wallpapers a generar")
+@click.option(
+    "--theme",
+    "-t",
+    multiple=True,
+    help="Tema(s) a usar (repetible). Por defecto rota los del brand.yaml",
+)
+@click.option("--demo", is_flag=True, help="Forzar modo demo sin APIs externas")
+@click.option(
+    "--output",
+    "-o",
+    default=None,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Directorio raíz (por defecto wallpapers/)",
+)
+def batch(count: int, theme: tuple[str, ...], demo: bool, output: Path | None) -> None:
+    """Genera un lote de wallpapers 4K verticales (2160×3840) para curar.
+
+    Útil para producir el pack «30 Wallpapers Reflexivos» del checklist:
+    genera más imágenes de las que necesitas y eliges las mejores a mano.
+    """
+    if demo:
+        import os
+
+        os.environ["DEMO_MODE"] = "true"
+        get_settings.cache_clear()
+
+    if count < 1:
+        console.print("[red]--count debe ser >= 1[/red]")
+        raise SystemExit(2)
+
+    console.print(
+        f"[bold green]Generando lote de {count} wallpapers (4K vertical)...[/bold green]"
+    )
+    themes = list(theme) if theme else None
+    result = run_wallpaper_batch(count, themes=themes, output_root=output)
+    manifest = result["manifest"]
+
+    table = Table(title=f"Lote {result['batch_id']}")
+    table.add_column("#", justify="right")
+    table.add_column("Tema")
+    table.add_column("Mensaje", overflow="fold")
+    for item in manifest["items"][:20]:
+        table.add_row(str(item["index"]), item["theme"], item["message"][:70])
+    if manifest["produced_count"] > 20:
+        table.add_row("…", "…", f"(+{manifest['produced_count'] - 20} más)")
+    console.print(table)
+    console.print(
+        f"\n[bold]Producidos:[/bold] {manifest['produced_count']}/{count} "
+        f"(fallos: {manifest['failed_count']})"
+    )
+    console.print(f"[bold]Directorio:[/bold] {result['path']}")
 
 
 @cli.command()

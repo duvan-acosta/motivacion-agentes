@@ -6,11 +6,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from utils.config import ensure_dir, get_settings
+from utils.config import ensure_dir, get_settings, load_yaml
 from utils.media import (
     create_gradient_background,
     fetch_pexels_photo,
     render_text_overlay,
+    render_wallpaper_overlay,
     resize_cover,
 )
 
@@ -22,6 +23,10 @@ EXPORTS = {
     "twitter_image": (1200, 675),
     "youtube_thumb": (1280, 720),
 }
+
+# Wallpaper móvil 4K vertical — cubre hasta iPhone 15 Pro Max (1290×2796)
+# y Android flagship sin pérdida de calidad.
+WALLPAPER_4K_VERTICAL = (2160, 3840)
 
 
 class ImagePipeline:
@@ -47,3 +52,41 @@ class ImagePipeline:
             logger.info("Imagen exportada: %s (%dx%d)", name, w, h)
 
         return results
+
+    def generate_wallpaper(
+        self,
+        message: str,
+        theme: str,
+        visual_spec: dict[str, Any],
+        output_path: Path,
+    ) -> Path:
+        """Genera un wallpaper móvil 4K vertical (2160×3840) listo para empaquetar.
+
+        Hace el render del overlay directamente sobre un lienzo vertical para
+        que la tipografía respete las proporciones (sin upscale desde 1080).
+        """
+        w, h = WALLPAPER_4K_VERTICAL
+        keywords = visual_spec.get("search_keywords", [theme])
+
+        # Pexels devuelve apaisado por defecto; intentamos primero un fondo
+        # vertical recortando. Si no hay Pexels, gradiente nativo del tamaño.
+        base_bg = fetch_pexels_photo(keywords, width=w, height=h)
+        if base_bg is None:
+            base_bg = create_gradient_background(w, h, theme)
+        else:
+            base_bg = resize_cover(base_bg, w, h)
+
+        brand_name = (
+            load_yaml("config/brand.yaml").get("brand", {}).get("display_name")
+            or "Mental Equilibrio"
+        )
+        master = render_wallpaper_overlay(base_bg, message, visual_spec, brand_name)
+
+        # Aseguramos exactamente el tamaño solicitado (por si overlay alteró).
+        if master.size != (w, h):
+            master = resize_cover(master, w, h)
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        master.save(output_path, "JPEG", quality=92)
+        logger.info("Wallpaper 4K exportado: %s (%dx%d)", output_path.name, w, h)
+        return output_path

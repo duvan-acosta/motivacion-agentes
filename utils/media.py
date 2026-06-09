@@ -154,6 +154,79 @@ def render_text_overlay(
     return img
 
 
+def render_wallpaper_overlay(
+    background: Image.Image,
+    message: str,
+    visual_spec: dict,
+    brand_name: str = "Mental Equilibrio",
+) -> Image.Image:
+    """Overlay específico para wallpaper móvil 4K vertical (2160×3840).
+
+    Distinto al ``render_text_overlay`` porque:
+    - Tipografía proporcional al lienzo (96-130 px).
+    - Wrap más estrecho (~1500 px) para mantener look editorial.
+    - Texto entre y=1400 y y=2600 (safe zone: fuera del notch superior
+      y del home indicator inferior de iOS).
+    - Pie de marca discreto cerca del borde inferior.
+    - Gradiente más sutil (opacity 0.35) para no ahogar la imagen base.
+    """
+    img = background.copy()
+    width, height = img.size
+
+    # Gradiente sutil de oscurecimiento solo en el tercio central para legibilidad.
+    opacity = int(visual_spec.get("gradient_opacity", 0.55) * 0.6 * 255)
+    gradient = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    gdraw = ImageDraw.Draw(gradient)
+    band_top = int(height * 0.30)
+    band_bottom = int(height * 0.72)
+    for y in range(band_top, band_bottom):
+        # Curva tipo bell: máximo en el centro, 0 en los bordes.
+        progress = (y - band_top) / max(1, band_bottom - band_top)
+        alpha = int(opacity * (1 - abs(2 * progress - 1)))
+        gdraw.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
+    img = Image.alpha_composite(img.convert("RGBA"), gradient).convert("RGB")
+    draw = ImageDraw.Draw(img)
+
+    # Tipografía mensaje principal — proporcional al alto del lienzo.
+    word_count = max(1, len(message.split()))
+    base_size = max(72, min(140, int(2400 / word_count)))
+    font = _load_font(
+        base_size,
+        visual_spec.get("font_family", "Playfair Display"),
+        visual_spec.get("fallback_font", "DejaVu Serif"),
+    )
+
+    max_width = int(width * 0.78)  # ~1685 px, deja márgenes generosos
+    lines = wrap_text(message, font, max_width, draw)
+    max_lines = visual_spec.get("max_lines", 6)
+    lines = lines[:max_lines]
+
+    line_height = int(base_size * 1.25)
+    total_height = len(lines) * line_height
+    y_start = (height - total_height) // 2  # centro vertical, dentro de safe zone
+
+    color = visual_spec.get("text_color", "#FFFFFF")
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_w = bbox[2] - bbox[0]
+        x = (width - text_w) // 2
+        y = y_start + i * line_height
+        # Sombra suave para legibilidad sobre cualquier fondo.
+        draw.text((x + 4, y + 4), line, font=font, fill="#000000")
+        draw.text((x, y), line, font=font, fill=color)
+
+    # Pie de marca discreto en la zona inferior segura (fuera del home indicator).
+    brand_font = _load_font(58, "Inter", "DejaVu Sans")
+    brand_bbox = draw.textbbox((0, 0), brand_name, font=brand_font)
+    brand_w = brand_bbox[2] - brand_bbox[0]
+    brand_x = (width - brand_w) // 2
+    brand_y = height - 380  # safe zone para iOS home indicator
+    draw.text((brand_x + 2, brand_y + 2), brand_name, font=brand_font, fill="#000000")
+    draw.text((brand_x, brand_y), brand_name, font=brand_font, fill="#E0E0E0")
+
+    return img
+
+
 def resize_cover(img: Image.Image, width: int, height: int) -> Image.Image:
     src_w, src_h = img.size
     scale = max(width / src_w, height / src_h)
