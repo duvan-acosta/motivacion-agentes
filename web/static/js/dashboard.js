@@ -559,8 +559,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   navTo("inicio");
+  // Auto-refresh cada 30s solo para vistas de solo lectura. Las secciones de
+  // formulario quedan fuera para no destruir lo que el usuario está escribiendo.
+  const AUTO_REFRESH_BLOCKED = new Set(["configuracion", "productos"]);
   setInterval(() => {
     const active = document.querySelector(".section.active");
-    if (active) loadSection(active.id);
+    if (active && !AUTO_REFRESH_BLOCKED.has(active.id)) loadSection(active.id);
   }, 30000);
 });
