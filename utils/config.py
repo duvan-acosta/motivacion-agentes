@@ -24,6 +24,10 @@ class Settings(BaseSettings):
 
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o", alias="OPENAI_MODEL")
+    # base_url custom para proveedores OpenAI-compatibles (DeepSeek, Groq,
+    # Together, Ollama local, etc.). Vacío = endpoints nativos de OpenAI.
+    # Ej. DeepSeek: https://api.deepseek.com
+    openai_base_url: str = Field(default="", alias="OPENAI_BASE_URL")
     openai_embedding_model: str = Field(
         default="text-embedding-3-small", alias="OPENAI_EMBEDDING_MODEL"
     )
@@ -125,6 +129,25 @@ class Settings(BaseSettings):
         if provider == "cloudinary":
             return bool(self.cloudinary_url)
         return False
+
+    def llm_kwargs(self) -> dict[str, Any]:
+        """Kwargs para langchain_openai.ChatOpenAI y openai.OpenAI.
+
+        Si ``openai_base_url`` está configurado, lo añade — esto permite
+        usar proveedores OpenAI-compatibles (DeepSeek, Groq, etc.).
+        """
+        kwargs: dict[str, Any] = {"api_key": self.openai_api_key}
+        if self.openai_base_url:
+            kwargs["base_url"] = self.openai_base_url.rstrip("/")
+        return kwargs
+
+    def is_native_openai(self) -> bool:
+        """True solo si se usa el endpoint OpenAI nativo (no DeepSeek u otro).
+
+        Whisper, embeddings y TTS son features exclusivas de OpenAI; si hay
+        un base_url custom, hay que saltar a fallbacks.
+        """
+        return self.has_openai() and not self.openai_base_url
 
     def use_mock(self) -> bool:
         if self.demo_mode:

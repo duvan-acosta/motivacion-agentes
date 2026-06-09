@@ -62,8 +62,8 @@ Responde SOLO JSON válido:
 
         llm = ChatOpenAI(
             model=self.settings.openai_model,
-            api_key=self.settings.openai_api_key,
             temperature=0.7,
+            **self.settings.llm_kwargs(),
         )
         response = llm.invoke([HumanMessage(content=prompt)])
         content = response.content if hasattr(response, "content") else str(response)

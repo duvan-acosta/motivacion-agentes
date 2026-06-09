@@ -17,8 +17,13 @@ CONFIG_GROUPS: list[dict[str, Any]] = [
         "id": "content",
         "label": "Generación de contenido",
         "fields": [
-            {"key": "OPENAI_API_KEY", "label": "OpenAI API Key", "type": "secret", "required": True},
-            {"key": "OPENAI_MODEL", "label": "Modelo OpenAI", "type": "text"},
+            {"key": "OPENAI_API_KEY", "label": "OpenAI / LLM API Key", "type": "secret", "required": True},
+            {"key": "OPENAI_MODEL", "label": "Modelo LLM (gpt-4o-mini, deepseek-chat, ...)", "type": "text"},
+            {
+                "key": "OPENAI_BASE_URL",
+                "label": "LLM Base URL (vacío = OpenAI; DeepSeek: https://api.deepseek.com)",
+                "type": "text",
+            },
             {"key": "PEXELS_API_KEY", "label": "Pexels API Key", "type": "secret"},
             {"key": "ELEVENLABS_API_KEY", "label": "ElevenLabs API Key", "type": "secret"},
             {"key": "ELEVENLABS_VOICE_ID", "label": "ElevenLabs Voice ID", "type": "text"},

@@ -98,8 +98,8 @@ Hashtags: 12-15, mezclando amplios + medios + nicho. Sin tildes. Incluye
 
         llm = ChatOpenAI(
             model=self.settings.openai_model,
-            api_key=self.settings.openai_api_key,
             temperature=0.8,
+            **self.settings.llm_kwargs(),
         )
         response = llm.invoke([HumanMessage(content=prompt)])
         content = response.content if hasattr(response, "content") else str(response)

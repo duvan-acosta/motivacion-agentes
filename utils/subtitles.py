@@ -107,7 +107,8 @@ def _estimate_cues_from_phrases(
 def _whisper_transcribe(audio_path: Path) -> list[Cue] | None:
     """Llama a Whisper y devuelve cues a nivel de segmento, o ``None`` si falla."""
     settings = get_settings()
-    if not settings.has_openai():
+    # Whisper solo en OpenAI nativo; con proveedores compatibles cae a estimación.
+    if not settings.is_native_openai():
         return None
     try:
         from openai import OpenAI  # type: ignore

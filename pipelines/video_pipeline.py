@@ -62,7 +62,9 @@ class VideoPipeline:
         if self.settings.tts_provider == "elevenlabs" and self.settings.elevenlabs_api_key:
             return self._tts_elevenlabs(script, out)
 
-        if self.settings.has_openai():
+        # OpenAI TTS solo está disponible con el endpoint nativo; proveedores
+        # compatibles (DeepSeek, Groq) no lo ofrecen — caemos al silent WAV.
+        if self.settings.is_native_openai():
             return self._tts_openai(script, out)
 
         return self._generate_silent_wav(script, out.with_suffix(".wav"))

@@ -74,6 +74,9 @@ class RAGStore:
     def _get_embeddings(self, texts: list[str]) -> list[list[float]] | None:
         if self.settings.use_mock():
             return None
+        # Proveedores OpenAI-compatibles (DeepSeek, Groq) no ofrecen embeddings.
+        if not self.settings.is_native_openai():
+            return None
         try:
             from langchain_openai import OpenAIEmbeddings
 
@@ -130,7 +133,7 @@ class RAGStore:
             self.initialize()
             collection = client.get_or_create_collection(name=collection_name)
 
-        if self.settings.use_mock():
+        if self.settings.use_mock() or not self.settings.is_native_openai():
             return self._fallback_query(collection_name, query_text, n_results)
 
         try:
