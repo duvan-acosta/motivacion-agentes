@@ -48,7 +48,8 @@ services:
       - "8080:8080"
     entrypoint: []
     command: ["python", "-m", "uvicorn", "web.app:app", "--host", "0.0.0.0", "--port", "8080"]
-    restart: unless-stopped
+    # Sin restart policy: deja que preview_start gestione el lifecycle. Para prod,
+    # usar `docker compose run` o un compose.prod.yml que sí incluya restart.
 
   # Scheduler en background (generación diaria)
   scheduler:
