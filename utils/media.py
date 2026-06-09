@@ -170,22 +170,9 @@ def render_wallpaper_overlay(
     - Pie de marca discreto cerca del borde inferior.
     - Gradiente más sutil (opacity 0.35) para no ahogar la imagen base.
     """
-    img = background.copy()
+    img = background.copy().convert("RGBA")
     width, height = img.size
-
-    # Gradiente sutil de oscurecimiento solo en el tercio central para legibilidad.
-    opacity = int(visual_spec.get("gradient_opacity", 0.55) * 0.6 * 255)
-    gradient = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    gdraw = ImageDraw.Draw(gradient)
-    band_top = int(height * 0.30)
-    band_bottom = int(height * 0.72)
-    for y in range(band_top, band_bottom):
-        # Curva tipo bell: máximo en el centro, 0 en los bordes.
-        progress = (y - band_top) / max(1, band_bottom - band_top)
-        alpha = int(opacity * (1 - abs(2 * progress - 1)))
-        gdraw.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
-    img = Image.alpha_composite(img.convert("RGBA"), gradient).convert("RGB")
-    draw = ImageDraw.Draw(img)
+    measure_draw = ImageDraw.Draw(img)
 
     # Tipografía mensaje principal — proporcional al alto del lienzo.
     word_count = max(1, len(message.split()))
@@ -197,7 +184,7 @@ def render_wallpaper_overlay(
     )
 
     max_width = int(width * 0.78)  # ~1685 px, deja márgenes generosos
-    lines = wrap_text(message, font, max_width, draw)
+    lines = wrap_text(message, font, max_width, measure_draw)
     max_lines = visual_spec.get("max_lines", 6)
     lines = lines[:max_lines]
 
@@ -205,14 +192,63 @@ def render_wallpaper_overlay(
     total_height = len(lines) * line_height
     y_start = (height - total_height) // 2  # centro vertical, dentro de safe zone
 
-    color = visual_spec.get("text_color", "#FFFFFF")
+    # Calcular el bbox global del bloque de texto + posiciones individuales.
+    positions: list[tuple[str, int, int]] = []
+    text_x_min, text_x_max = width, 0
     for i, line in enumerate(lines):
-        bbox = draw.textbbox((0, 0), line, font=font)
+        bbox = measure_draw.textbbox((0, 0), line, font=font)
         text_w = bbox[2] - bbox[0]
         x = (width - text_w) // 2
         y = y_start + i * line_height
-        # Sombra suave para legibilidad sobre cualquier fondo.
-        draw.text((x + 4, y + 4), line, font=font, fill="#000000")
+        positions.append((line, x, y))
+        text_x_min = min(text_x_min, x)
+        text_x_max = max(text_x_max, x + text_w)
+    text_y_min = y_start
+    text_y_max = y_start + total_height
+
+    # Padding generoso para la caja.
+    pad_x, pad_y = 70, 50
+    box_left = max(40, text_x_min - pad_x)
+    box_top = max(40, text_y_min - pad_y)
+    box_right = min(width - 40, text_x_max + pad_x)
+    box_bottom = min(height - 40, text_y_max + pad_y)
+
+    # Análisis del brillo del fondo en la zona del texto (luminance media).
+    # Permite adaptar la opacidad de la caja: fondo claro → caja más oscura.
+    text_region = img.convert("L").crop((box_left, box_top, box_right, box_bottom))
+    pixel_data = list(text_region.getdata())
+    avg_luminance = sum(pixel_data) / max(1, len(pixel_data))  # 0 negro · 255 blanco
+    # Mapeo: fondo oscuro (lum 0-80) → alpha 90; medio (80-150) → 140; claro (>150) → 180.
+    if avg_luminance > 150:
+        box_alpha = 185  # fondo claro → caja muy oscura para garantizar contraste
+    elif avg_luminance > 80:
+        box_alpha = 140
+    else:
+        box_alpha = 90
+
+    # Dibujar caja semi-transparente con bordes redondeados detrás del texto.
+    box_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    box_draw = ImageDraw.Draw(box_layer)
+    try:
+        box_draw.rounded_rectangle(
+            [box_left, box_top, box_right, box_bottom],
+            radius=24,
+            fill=(0, 0, 0, box_alpha),
+        )
+    except AttributeError:  # Pillow muy viejo: fallback a rectángulo recto
+        box_draw.rectangle(
+            [box_left, box_top, box_right, box_bottom],
+            fill=(0, 0, 0, box_alpha),
+        )
+    img = Image.alpha_composite(img, box_layer)
+    draw = ImageDraw.Draw(img)
+
+    # Texto blanco con stroke negro ligero — robusto incluso si la caja
+    # quedara desplazada por algún motivo.
+    color = visual_spec.get("text_color", "#FFFFFF")
+    for line, x, y in positions:
+        for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
+            draw.text((x + dx, y + dy), line, font=font, fill="#000000")
         draw.text((x, y), line, font=font, fill=color)
 
     # Pie de marca discreto en la zona inferior segura (fuera del home indicator).
@@ -221,10 +257,22 @@ def render_wallpaper_overlay(
     brand_w = brand_bbox[2] - brand_bbox[0]
     brand_x = (width - brand_w) // 2
     brand_y = height - 380  # safe zone para iOS home indicator
-    draw.text((brand_x + 2, brand_y + 2), brand_name, font=brand_font, fill="#000000")
-    draw.text((brand_x, brand_y), brand_name, font=brand_font, fill="#E0E0E0")
+    # Mismo análisis para el pie de marca, en su zona específica.
+    brand_region = img.convert("L").crop(
+        (brand_x - 20, brand_y - 10, brand_x + brand_w + 20, brand_y + 70)
+    )
+    brand_data = list(brand_region.getdata())
+    brand_lum = sum(brand_data) / max(1, len(brand_data))
+    if brand_lum > 150:
+        brand_color = "#1A1A1A"  # texto oscuro sobre fondo claro
+        brand_stroke = "#FFFFFF"
+    else:
+        brand_color = "#E0E0E0"
+        brand_stroke = "#000000"
+    draw.text((brand_x + 2, brand_y + 2), brand_name, font=brand_font, fill=brand_stroke)
+    draw.text((brand_x, brand_y), brand_name, font=brand_font, fill=brand_color)
 
-    return img
+    return img.convert("RGB")
 
 
 def resize_cover(img: Image.Image, width: int, height: int) -> Image.Image:
