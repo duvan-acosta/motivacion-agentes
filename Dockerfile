@@ -7,6 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     fonts-dejavu-core \
+    fonts-vollkorn \
+    fonts-cabin \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

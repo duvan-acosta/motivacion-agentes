@@ -47,9 +47,9 @@ hashtags_base:
   - "#sabiduria"
 
 visual:
-  font_family: "Playfair Display"
+  font_family: "Vollkorn"       # serif moderna alemana, cálida, no tradicional
   fallback_font: "DejaVu Serif"
-  text_color: "#FFFFFF"
+  text_color: "#FAF3E7"         # blanco crema cálido, no puro
   gradient_opacity: 0.55
   max_message_lines: 6
 

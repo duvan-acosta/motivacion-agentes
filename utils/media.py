@@ -77,10 +77,37 @@ def create_gradient_background(width: int, height: int, theme: str) -> Image.Ima
 
 
 def _load_font(size: int, font_name: str, fallback: str) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Carga una fuente por nombre buscando en paths estándar.
+
+    Soporta los nombres principales que usa la marca: ``Lora`` (humanista
+    serif moderna, instalada vía ``fonts-lora`` en el contenedor),
+    ``DejaVu Serif``, ``DejaVu Sans``, ``Inter``, ``Playfair Display``.
+    """
+    n = font_name.replace(" ", "")
+    fb = fallback.replace(" ", "")
     candidates = [
-        f"C:/Windows/Fonts/{font_name.replace(' ', '')}.ttf",
-        f"C:/Windows/Fonts/{fallback.replace(' ', '')}.ttf",
+        # Linux — paths instalados por apt en Debian Bookworm
+        f"/usr/share/fonts/truetype/vollkorn/{n}-Bold.ttf",
+        f"/usr/share/fonts/truetype/vollkorn/{n}-Regular.ttf",
+        f"/usr/share/fonts/truetype/cabin/{n}-Bold.ttf",
+        f"/usr/share/fonts/truetype/cabin/{n}-Regular.ttf",
+        f"/usr/share/fonts/truetype/{n.lower()}/{n}-Bold.ttf",
+        f"/usr/share/fonts/truetype/{n.lower()}/{n}-Regular.ttf",
+        # Vollkorn explícito (serif moderna humanista, fuente principal de marca)
+        "/usr/share/fonts/truetype/vollkorn/Vollkorn-Bold.ttf",
+        "/usr/share/fonts/truetype/vollkorn/Vollkorn-Regular.ttf",
+        # Cabin (humanist sans para pie de marca / soporte) — en opentype/
+        "/usr/share/fonts/opentype/cabin/Cabin-SemiBold.otf",
+        "/usr/share/fonts/opentype/cabin/Cabin-Regular.otf",
+        f"/usr/share/fonts/opentype/cabin/{n}-SemiBold.otf",
+        f"/usr/share/fonts/opentype/cabin/{n}-Regular.otf",
+        # Windows
+        f"C:/Windows/Fonts/{n}.ttf",
+        f"C:/Windows/Fonts/{n}-Bold.ttf",
+        f"C:/Windows/Fonts/{fb}.ttf",
+        # Fallbacks universales
         "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/System/Library/Fonts/Supplemental/Georgia.ttf",
     ]
     for path in candidates:
@@ -175,11 +202,12 @@ def render_wallpaper_overlay(
     measure_draw = ImageDraw.Draw(img)
 
     # Tipografía mensaje principal — proporcional al alto del lienzo.
+    # +30% vs versión anterior (76→94, 140→182) para look más impactante en móvil.
     word_count = max(1, len(message.split()))
-    base_size = max(72, min(140, int(2400 / word_count)))
+    base_size = max(94, min(182, int(3120 / word_count)))
     font = _load_font(
         base_size,
-        visual_spec.get("font_family", "Playfair Display"),
+        visual_spec.get("font_family", "Vollkorn"),  # serif humanista, distintiva
         visual_spec.get("fallback_font", "DejaVu Serif"),
     )
 
@@ -218,41 +246,34 @@ def render_wallpaper_overlay(
     text_region = img.convert("L").crop((box_left, box_top, box_right, box_bottom))
     pixel_data = list(text_region.getdata())
     avg_luminance = sum(pixel_data) / max(1, len(pixel_data))  # 0 negro · 255 blanco
-    # Mapeo: fondo oscuro (lum 0-80) → alpha 90; medio (80-150) → 140; claro (>150) → 180.
+    # Opacidad sutil: fondo claro → alpha 140; medio → 100; oscuro → 60.
+    # Bajada vs versión anterior para no ahogar la foto.
     if avg_luminance > 150:
-        box_alpha = 185  # fondo claro → caja muy oscura para garantizar contraste
-    elif avg_luminance > 80:
         box_alpha = 140
+    elif avg_luminance > 80:
+        box_alpha = 100
     else:
-        box_alpha = 90
+        box_alpha = 60
 
-    # Dibujar caja semi-transparente con bordes redondeados detrás del texto.
+    # Rectángulo recto (sin bordes redondeados, look más editorial directo).
     box_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     box_draw = ImageDraw.Draw(box_layer)
-    try:
-        box_draw.rounded_rectangle(
-            [box_left, box_top, box_right, box_bottom],
-            radius=24,
-            fill=(0, 0, 0, box_alpha),
-        )
-    except AttributeError:  # Pillow muy viejo: fallback a rectángulo recto
-        box_draw.rectangle(
-            [box_left, box_top, box_right, box_bottom],
-            fill=(0, 0, 0, box_alpha),
-        )
+    box_draw.rectangle(
+        [box_left, box_top, box_right, box_bottom],
+        fill=(0, 0, 0, box_alpha),
+    )
     img = Image.alpha_composite(img, box_layer)
     draw = ImageDraw.Draw(img)
 
-    # Texto blanco con stroke negro ligero — robusto incluso si la caja
-    # quedara desplazada por algún motivo.
-    color = visual_spec.get("text_color", "#FFFFFF")
+    # Texto en blanco crema cálido (no blanco puro) con stroke negro ligero.
+    color = visual_spec.get("text_color", "#FAF3E7")
     for line, x, y in positions:
         for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
             draw.text((x + dx, y + dy), line, font=font, fill="#000000")
         draw.text((x, y), line, font=font, fill=color)
 
     # Pie de marca discreto en la zona inferior segura (fuera del home indicator).
-    brand_font = _load_font(58, "Inter", "DejaVu Sans")
+    brand_font = _load_font(58, "Cabin", "DejaVu Sans")
     brand_bbox = draw.textbbox((0, 0), brand_name, font=brand_font)
     brand_w = brand_bbox[2] - brand_bbox[0]
     brand_x = (width - brand_w) // 2

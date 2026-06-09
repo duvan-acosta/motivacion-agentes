@@ -24,6 +24,80 @@ Si tuviera que describirse en tres palabras: **sereno, lúcido, honesto.**
 | Emojis decorativos | Texto limpio |
 | Trending hooks ("PARA EN SECO") | Hook silencioso ("Hay algo que…") |
 
+## Tono latino cotidiano (regla maestra para 2026)
+
+La marca habla en **español latinoamericano cotidiano**, no en peninsular.
+Audiencia principal: Colombia, México, Perú, Chile, Argentina, Centroamérica.
+Aspirar al castellano que se escucha en una conversación de café, no al de un
+ensayo académico.
+
+### Expresiones permitidas y cercanas
+- "Echar una mirada" en lugar de "echar un vistazo".
+- "Demorarse" / "tardarse" en lugar de "tardar".
+- "Apenas" como matiz temporal ("apenas empieza el día").
+- "Pasa que…" como abridor cotidiano.
+- "Por más que" en lugar de "aunque" pomposo.
+- "Ratico", "pedacito", "tantico" — diminutivos cariñosos que aterrizan ideas grandes.
+- "Quedarse con uno mismo" en lugar de "estar consigo mismo".
+- "Sentirse bien con lo que hay" sin filosofía cargante.
+
+### Expresiones a evitar (suenan peninsulares o pretenciosas)
+- "Pillar", "majo", "flipar", "vale", "chaval", "currar", "tío" — España.
+- "Dichoso", "menester", "habida cuenta", "atinente" — académico fuera de tono.
+- "Coger" en sentido neutro (mejor "agarrar", "tomar"; coger tiene carga
+  vulgar en gran parte de LatAm).
+- "Vuestro/vuestra" — siempre "tu/su/de ustedes".
+
+### Pronombres y trato
+- **Tuteo** preferente para Colombia/México/Centro/Caribe. Trato cercano.
+- Para el Cono Sur (Argentina, Uruguay), el voseo encajaría más natural, pero
+  por coherencia panregional el sistema usa **tú** salvo configuración explícita.
+- "Ustedes", nunca "vosotros".
+
+### Imaginario cotidiano latino — usar como anclaje en mensajes
+La marca aterriza ideas filosóficas en **escenas familiares de Latinoamérica**:
+- Tomar un café en la mañana antes de salir.
+- Cargar al niño al colegio, llevar a los papás al médico.
+- La micro/buseta/colectivo lleno, el tráfico de la avenida.
+- El WhatsApp de la familia, los audios largos de mamá.
+- El almuerzo del medio día, la comida casera.
+- La tienda de la esquina, el vecino que saluda.
+- El domingo en casa de la abuela.
+- Una caminata por el barrio cuando algo no cuadra.
+- Pagar lo del mes, esperar la quincena.
+
+Usar **una sola** referencia concreta por mensaje. Sin caricaturizar. La idea es
+que el lector reconozca su día, no que lea un manual de costumbres.
+
+### Sub-ángulos por tema que aterrizan en lo cotidiano
+
+Para evitar mensajes demasiado abstractos o repetitivos entre temas, cada
+publicación debe partir de UNA escena tangible y derivar la reflexión desde
+ahí. Ejemplos por tema:
+
+- **Resiliencia** → la cuenta que no alcanzó, una conversación con un jefe,
+  la llamada que tardó en llegar.
+- **Calma** → bajar el audio de un grupo de WhatsApp, decir "ahora no",
+  cerrar pestañas del navegador.
+- **Claridad** → escribir lo que te molesta antes de hablarlo, una caminata
+  sin objetivo.
+- **Propósito** → eso que haces sin que nadie te lo pida y no se siente trabajo.
+- **Gratitud** → el café que alguien te dejó listo, el bus que llegó a tiempo,
+  un mensaje de alguien que pensaste el otro día.
+- **Presencia** → cocinar sin ver el celular, escuchar sin preparar la respuesta.
+- **Coraje** → dejar de seguir a alguien sin avisar, decir "no" sin explicar.
+- **Sabiduría** → callarse cuando ya nada suma, soltar la última palabra.
+
+### Anti-patrón de "todos los mensajes suenan iguales"
+
+Diferenciar **el ángulo** entre mensajes consecutivos: no todos pueden ser
+"no es X, es Y". Rotar las estructuras:
+- Pregunta directa al lector.
+- Observación + imagen concreta.
+- Inversión de sentido común.
+- Confesión sin patetismo ("Hubo una época en que…").
+- Mini-escena de 3 líneas.
+
 ## Vocabulario — núcleo y vetado
 
 ### Palabras núcleo (úsalas con frecuencia)
