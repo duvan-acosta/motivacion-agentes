@@ -11,6 +11,7 @@ services:
       - ./publication_queue:/app/publication_queue
       - ./data/chroma:/app/data/chroma
       - ./tmp:/app/tmp
+      - ./wallpapers:/app/wallpapers
       - ./.env:/app/.env:ro
     working_dir: /app
 
@@ -27,6 +28,7 @@ services:
       - ./publication_queue:/app/publication_queue
       - ./data/chroma:/app/data/chroma
       - ./tmp:/app/tmp
+      - ./wallpapers:/app/wallpapers
     command: ["generate", "--demo"]
 
   # Panel web de administración
@@ -64,6 +66,7 @@ services:
       - ./publication_queue:/app/publication_queue
       - ./data/chroma:/app/data/chroma
       - ./tmp:/app/tmp
+      - ./wallpapers:/app/wallpapers
       - ./.env:/app/.env:ro
     command: ["schedule"]
     restart: unless-stopped
