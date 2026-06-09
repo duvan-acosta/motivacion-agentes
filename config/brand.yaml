@@ -15,36 +15,46 @@ brand:
     facebook: "mentalequilibrio18"       # página de Facebook
   language: es
   tone:
-    - sereno
-    - profundo
-    - accesible
+    - directo
+    - cálido
+    - esperanzador
   avoid:
-    - clichés vacíos
-    - toxic positivity
-    - frases genéricas sin sustancia
+    - frases nuevas-eras (vibras, manifestar, ley de atracción)
+    - toxic positivity ("solo piensa positivo")
+    - culpabilizar al lector
+    - sermón académico / filosofía críptica
 
 content:
   posts_per_day: 1
   reels_per_day: 1
+  # Temas ampliados: psicología práctica, no solo "estoicismo". El sistema
+  # rota equitativamente entre estos al lanzar batches grandes.
   themes_rotation:
-    - resiliencia
+    - esperanza
+    - amor_propio
+    - empezar_de_nuevo
+    - ansiedad_cotidiana
+    - autoestima
     - calma
-    - claridad
+    - resiliencia
     - propósito
     - gratitud
-    - presencia
     - coraje
-    - sabiduría
+    - soledad_saludable
+    - limites
 
+# Hashtags base alineados con motivación masiva latina (no "filosofía").
 hashtags_base:
-  - "#filosofia"
-  - "#estoicismo"
   - "#motivacion"
-  - "#reflexion"
-  - "#mindfulness"
+  - "#amorpropio"
+  - "#saludmental"
+  - "#frasesmotivadoras"
+  - "#superacion"
+  - "#autoestima"
   - "#crecimientopersonal"
-  - "#vidaconsciente"
-  - "#sabiduria"
+  - "#pazinterior"
+  - "#bienestar"
+  - "#mentalidad"
 
 visual:
   font_family: "Vollkorn"       # serif moderna alemana, cálida, no tradicional
