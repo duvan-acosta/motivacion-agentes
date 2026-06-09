@@ -49,7 +49,7 @@ Sobre lienzo 1080×1080 (referencia):
 |----------|--------|----------|-------|
 | Mensaje principal | 56-78 px | -10 a -20 | Adaptativo según largo |
 | Frase secundaria opcional | 28-32 px | 0 | Pocas veces; solo cuando aporta |
-| Pie de marca (`@mentalequilibrio`) | 18-22 px | +40 | Discreto, esquina inferior |
+| Pie de marca (`Mental Equilibrio`) | 18-22 px | +40 | Discreto, esquina inferior. El handle real difiere por plataforma; el pie usa el nombre legible para mantener coherencia visual cross-canal. |
 
 ### Reglas tipográficas
 

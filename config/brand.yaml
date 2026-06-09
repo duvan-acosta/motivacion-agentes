@@ -1,8 +1,18 @@
 brand:
   name: "Mental Equilibrio"
+  display_name: "Mental Equilibrio"  # usado en pie de marca de imágenes/videos
   tagline: "Equilibrio mental para la vida diaria"
-  handle: "@mentalequilibrio"
   email: "mentalequilibrio18@gmail.com"
+
+  # Handles reales por plataforma. Los handles difieren entre redes porque
+  # `mentalequilibrio` limpio no estaba disponible en todas. El sistema usa
+  # estos para construir URLs canónicas y para CTAs de cuenta cruzada.
+  handles:
+    instagram: "@mentalequilibrio18"
+    tiktok: "@mentalequilibrio91"
+    youtube: "EquilibrioMental91"        # nombre del canal (no es @)
+    twitter: "@MentalEquilibri"          # 15 chars máx por límite de X
+    facebook: ""                         # pendiente — añadir cuando exista
   language: es
   tone:
     - sereno
