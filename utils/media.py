@@ -140,45 +140,109 @@ def render_text_overlay(
     background: Image.Image,
     message: str,
     visual_spec: dict,
+    brand_name: str = "Mental Equilibrio",
 ) -> Image.Image:
-    img = background.copy()
+    """Overlay para formatos de red social (1080×1080 feed, 1200×675 X,
+    1280×720 YouTube thumb).
+
+    Mismo enfoque adaptativo que render_wallpaper_overlay:
+    - Caja semi-transparente con opacidad según luminance del fondo.
+    - Vollkorn (serif moderna humanista) sobre crema #FAF3E7.
+    - Stroke negro 2px para legibilidad redundante.
+    - Pie de marca discreto y adaptativo.
+    Sin el gradiente "abajo→arriba" del render anterior (era poco editorial
+    y no resolvía contraste sobre fondos claros).
+    """
+    img = background.copy().convert("RGBA")
     width, height = img.size
-    draw = ImageDraw.Draw(img, "RGBA")
+    measure_draw = ImageDraw.Draw(img)
 
-    opacity = int(visual_spec.get("gradient_opacity", 0.55) * 255)
-    gradient = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    gdraw = ImageDraw.Draw(gradient)
-    for y in range(height // 2, height):
-        alpha = int(opacity * (y - height // 2) / (height // 2))
-        gdraw.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
-    img = Image.alpha_composite(img.convert("RGBA"), gradient).convert("RGB")
-    draw = ImageDraw.Draw(img)
-
-    base_size = max(28, min(64, 900 // max(len(message.split()), 1)))
+    # Tipografía adaptativa al tamaño del lienzo.
+    # En 1080 cuadrado, ~48-72 px; en 1200×675, ~44-64 px (lienzo más bajo).
+    word_count = max(1, len(message.split()))
+    canvas_factor = min(width, height) / 1080
+    base_size = max(36, min(72, int(900 * canvas_factor / word_count)))
+    base_size = int(base_size * 1.15)  # leve subida para más impacto en feed
     font = _load_font(
         base_size,
-        visual_spec.get("font_family", "Playfair Display"),
+        visual_spec.get("font_family", "Vollkorn"),
         visual_spec.get("fallback_font", "DejaVu Serif"),
     )
-    max_width = int(width * 0.85)
-    lines = wrap_text(message, font, max_width, draw)
+
+    max_width = int(width * 0.82)
+    lines = wrap_text(message, font, max_width, measure_draw)
     max_lines = visual_spec.get("max_lines", 6)
     lines = lines[:max_lines]
 
-    line_height = base_size + 12
+    line_height = int(base_size * 1.22)
     total_height = len(lines) * line_height
-    y_start = (height - total_height) // 2
+    y_start = max(40, (height - total_height) // 2)
 
-    color = visual_spec.get("text_color", "#FFFFFF")
+    # Calcular bbox global del texto.
+    positions: list[tuple[str, int, int]] = []
+    text_x_min, text_x_max = width, 0
     for i, line in enumerate(lines):
-        bbox = draw.textbbox((0, 0), line, font=font)
+        bbox = measure_draw.textbbox((0, 0), line, font=font)
         text_w = bbox[2] - bbox[0]
         x = (width - text_w) // 2
         y = y_start + i * line_height
-        draw.text((x + 2, y + 2), line, font=font, fill="#000000")
+        positions.append((line, x, y))
+        text_x_min = min(text_x_min, x)
+        text_x_max = max(text_x_max, x + text_w)
+    text_y_max = y_start + total_height
+
+    # Caja semi-transparente con opacidad adaptativa.
+    pad_x, pad_y = int(width * 0.04), int(height * 0.03)
+    box_left = max(20, text_x_min - pad_x)
+    box_top = max(20, y_start - pad_y)
+    box_right = min(width - 20, text_x_max + pad_x)
+    box_bottom = min(height - 20, text_y_max + pad_y)
+
+    text_region = img.convert("L").crop((box_left, box_top, box_right, box_bottom))
+    pixel_data = list(text_region.getdata())
+    avg_luminance = sum(pixel_data) / max(1, len(pixel_data))
+    if avg_luminance > 150:
+        box_alpha = 140
+    elif avg_luminance > 80:
+        box_alpha = 100
+    else:
+        box_alpha = 60
+
+    box_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    box_draw = ImageDraw.Draw(box_layer)
+    box_draw.rectangle(
+        [box_left, box_top, box_right, box_bottom],
+        fill=(0, 0, 0, box_alpha),
+    )
+    img = Image.alpha_composite(img, box_layer)
+    draw = ImageDraw.Draw(img)
+
+    # Texto crema cálido con stroke negro 2px.
+    color = visual_spec.get("text_color", "#FAF3E7")
+    for line, x, y in positions:
+        for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
+            draw.text((x + dx, y + dy), line, font=font, fill="#000000")
         draw.text((x, y), line, font=font, fill=color)
 
-    return img
+    # Pie de marca discreto (proporcional al lienzo) si hay espacio.
+    if height >= 600:
+        brand_size = max(18, int(min(width, height) * 0.025))
+        brand_font = _load_font(brand_size, "Cabin", "DejaVu Sans")
+        brand_bbox = draw.textbbox((0, 0), brand_name, font=brand_font)
+        brand_w = brand_bbox[2] - brand_bbox[0]
+        brand_x = (width - brand_w) // 2
+        brand_y = height - int(brand_size * 2.2)
+        brand_region = img.convert("L").crop(
+            (brand_x - 10, brand_y - 5, brand_x + brand_w + 10, brand_y + brand_size + 5)
+        )
+        brand_data = list(brand_region.getdata())
+        brand_lum = sum(brand_data) / max(1, len(brand_data))
+        brand_color = "#1A1A1A" if brand_lum > 150 else "#E0E0E0"
+        brand_stroke = "#FFFFFF" if brand_lum > 150 else "#000000"
+        draw.text((brand_x + 1, brand_y + 1), brand_name, font=brand_font, fill=brand_stroke)
+        draw.text((brand_x, brand_y), brand_name, font=brand_font, fill=brand_color)
+
+    return img.convert("RGB")
 
 
 def render_wallpaper_overlay(

@@ -1,160 +1,165 @@
-# Dirección visual — guía profesional
+# Dirección visual — Mental Equilibrio
 
-Este documento alimenta al `VisualDesignerAgent`. Define paleta, tipografía,
-composición y selección de fondos para que todo lo que se publique tenga
-identidad de marca y calidad editorial.
+Documento de referencia para `VisualDesignerAgent`. Define paleta, tipografía,
+composición y selección de fondos para que el contenido se vea como una marca
+**cálida, motivacional y editorial moderna**: lejos del Canva genérico y lejos
+del Tumblr filosófico-frío.
 
-## Identidad visual de marca — Mental Equilibrio
+## Identidad visual
 
-- **Estilo general:** editorial, contemplativo, fotográfico. Más cercano a una
-  revista cultural impresa que a un feed de motivación genérico.
-- **Atributos:** sereno, contenido, respirado, con espacio en blanco.
-- **Lo que NO somos:** explosivo, saturado, neón, infantil, "Canva genérico",
-  decorado con stickers o gradientes arcoíris.
+- **Estilo:** editorial cálido. Foto fotográfica auténtica de Pexels +
+  tipografía serif moderna + caja sutil para contraste + color de texto crema.
+- **Atributos:** acogedor, claro, esperanzador, humano, contemporáneo.
+- **Lo que NO somos:**
+  - Saturado de stickers, emojis grandes o gradientes neón.
+  - Filosófico frío estilo "tumblr aesthetic".
+  - Genérico de plantilla Canva con bordes de hojas y mariposas.
+  - Stock corporativo (sonrisas plásticas, "team building" americano).
+
+## Tipografía
+
+- **Mensaje principal:** **Vollkorn** (serif moderna alemana, humanista,
+  cálida). Instalada vía `fonts-vollkorn` en el contenedor.
+- **Fallback display:** DejaVu Serif.
+- **Pie de marca y soporte:** **Cabin** (humanist sans, clara y amigable).
+- **Fallback sans:** DejaVu Sans.
+
+### Jerarquía tipográfica para 1080×1080 (feed/post)
+
+| Elemento | Tamaño aprox. | Notas |
+|----------|---------------|-------|
+| Mensaje principal (Vollkorn Bold) | 48-72 px | adaptativo según largo |
+| Pie de marca (Cabin SemiBold) | 22-28 px | esquina inferior |
+
+### Jerarquía tipográfica para 2160×3840 (wallpaper)
+
+| Elemento | Tamaño aprox. | Notas |
+|----------|---------------|-------|
+| Mensaje principal (Vollkorn Bold) | 94-182 px | adaptativo |
+| Pie de marca (Cabin SemiBold) | 58 px | safe zone inferior |
+
+### Reglas tipográficas
+
+- Máximo **6 líneas** por lienzo. Si no entra, reescribir más corto.
+- Color del texto: **crema cálido `#FAF3E7`** sobre caja semi-transparente,
+  no blanco puro.
+- Stroke negro 2px en 4 direcciones (legibilidad sobre cualquier fondo).
+- Interlineado 1.20-1.25.
+- Alineación centrada para feed cuadrado e imagen vertical; izquierda para
+  twitter 16:9 cuando aplique.
 
 ## Paletas por tema (HEX)
 
-Cada tema tiene una paleta tonal coherente. Se aplica al gradiente de fondo, al
-acento sutil y, ocasionalmente, al color de texto secundario.
+Cada tema tiene una paleta cálida o serena coherente. Se aplica al gradiente
+de fondo procedural cuando Pexels no devuelve foto.
+
+### Temas reflexivos (mantenidos del catálogo anterior)
 
 | Tema | Dominante | Acento | Sombra | Atmósfera |
 |------|-----------|--------|--------|-----------|
 | Resiliencia | `#1F2A38` azul tormenta | `#C29A55` ocre | `#0B1117` | Cielo después de la tormenta |
-| Calma | `#2C4A52` verde azulado | `#A8C5C0` salvia clara | `#10202A` | Niebla sobre el agua |
+| Calma | `#2C4A52` verde azulado | `#A8C5C0` salvia | `#10202A` | Niebla sobre agua |
 | Claridad | `#E6C893` dorado suave | `#FFFFFF` blanco | `#3B2F1F` | Amanecer |
 | Propósito | `#3E5641` verde bosque | `#D7B27B` arena | `#1A2519` | Camino entre árboles |
 | Gratitud | `#C57B57` terracota | `#F5E6CA` crema | `#5C3A28` | Luz cálida de tarde |
 | Presencia | `#2A2D34` carbón | `#9BA9B4` plata | `#13151B` | Lluvia tranquila |
-| Coraje | `#3C1F2B` vino profundo | `#D88C5A` cobre | `#1A0C13` | Vendaval, fuego contenido |
+| Coraje | `#3C1F2B` vino profundo | `#D88C5A` cobre | `#1A0C13` | Vendaval contenido |
 | Sabiduría | `#1A2238` azul noche | `#9DAAF2` violeta tenue | `#0A0E1A` | Cielo estrellado |
 
-**Regla:** una sola publicación usa una sola paleta. Nada de combinar paletas en
-una misma imagen o video.
+### Temas motivacionales nuevos (paletas cálidas y empáticas)
 
-## Tipografía
+| Tema | Dominante | Acento | Sombra | Atmósfera |
+|------|-----------|--------|--------|-----------|
+| Esperanza | `#E89B5A` naranja amanecer | `#FFE4C7` crema | `#5C3520` | Amanecer cálido |
+| Amor propio | `#D17A8F` rosa terra | `#F8E0DD` rosa pálido | `#5A2A36` | Luz de vela, ternura |
+| Empezar de nuevo | `#E6B466` dorado suave | `#FFF4DA` marfil | `#4A331A` | Nuevo amanecer |
+| Ansiedad cotidiana | `#5E7A8C` azul ahumado | `#C9D6DE` cielo pálido | `#1F2E38` | Cielo nocturno calmo |
+| Autoestima | `#B26B4F` cobre | `#F0D2BB` durazno | `#3D1F12` | Luz de tarde cálida |
+| Soledad saludable | `#4A6373` azul slate | `#B7C8D2` plata azul | `#1A2730` | Habitación tranquila |
+| Límites | `#7D4A4A` rojo tierra | `#E0B8B8` rosa polvo | `#2E1818` | Puerta cerrada al sol |
 
-- **Display (mensaje principal):** Playfair Display, peso 600-700.
-  Es una serif con personalidad editorial; añade elegancia sin ser fría.
-- **Fallback display:** DejaVu Serif (siempre disponible en el contenedor).
-- **Soporte (caption sobre imagen, créditos):** Inter, peso 400-500.
-  Cuando el texto secundario aparece, va en sans neutra para no competir.
-- **Numerales y signos:** mismos pesos. Evitar combinar negrita + cursiva en
-  una misma línea.
+**Regla:** una sola publicación = una sola paleta. Nada de combinar.
 
-### Jerarquía tipográfica
+## Composición — reglas activas
 
-Sobre lienzo 1080×1080 (referencia):
+1. **Foto fotográfica de Pexels** como base siempre que sea posible.
+2. **Texto centrado** sobre caja semi-transparente oscura adaptativa.
+3. **Caja sin bordes redondeados** (look editorial moderno, no chat-bubble).
+4. **Opacidad adaptativa de la caja:** se mide la luminance del fondo en la
+   zona del texto y se ajusta automáticamente:
+   - Fondo claro (lum > 150) → caja α=140 (visible)
+   - Fondo medio (80-150) → caja α=100 (sutil)
+   - Fondo oscuro (< 80) → caja α=60 (apenas perceptible)
+5. **Texto en crema cálido `#FAF3E7`** con stroke negro fino.
+6. **Pie de marca** "Mental Equilibrio" siempre presente, esquina inferior,
+   también con color adaptativo (claro u oscuro según el fondo).
+7. **Espacio negativo respirado:** texto + pie ocupan máximo 60% del área.
 
-| Elemento | Tamaño | Tracking | Notas |
-|----------|--------|----------|-------|
-| Mensaje principal | 56-78 px | -10 a -20 | Adaptativo según largo |
-| Frase secundaria opcional | 28-32 px | 0 | Pocas veces; solo cuando aporta |
-| Pie de marca (`Mental Equilibrio`) | 18-22 px | +40 | Discreto, esquina inferior. El handle real difiere por plataforma; el pie usa el nombre legible para mantener coherencia visual cross-canal. |
+## Anti-patrones (no hacer)
 
-### Reglas tipográficas
-
-- Máximo **6 líneas** por imagen. Si el mensaje no entra, se acorta el mensaje,
-  no se reduce la fuente más allá de 48 px.
-- Interlineado: 1.15-1.25. Más apretado se ahoga; más suelto se desmiembra.
-- Alineación: izquierda (preferida, lectura editorial) o centrada (cuando la
-  composición lo pide). Justificada **nunca**.
-- Cursivas solo para énfasis puntual (1-2 palabras), nunca frases enteras.
-- Mayúsculas sostenidas solo en una palabra ocasionalmente, no en el mensaje.
-
-## Composición — reglas profesionales
-
-### Reglas activas
-
-1. **Espacio negativo generoso.** El texto ocupa como mucho 55% del área visual.
-2. **Regla de tercios.** Punto focal del fondo en una intersección, texto en el
-   tercio opuesto.
-3. **Contraste mínimo 7:1** (WCAG AAA) entre texto y fondo. El gradiente oscuro
-   semitransparente se aplica siempre que la foto base lo requiera.
-4. **Eje de lectura único.** Que el ojo vaya del fondo al título al pie de
-   marca sin rebote.
-5. **Marca discreta.** El handle/logo aparece pequeño, esquina inferior; nunca
-   compite con el mensaje.
-
-### Anti-patrones (no hacer)
-
-- Texto sobre el rostro de una persona o sobre detalles complejos.
-- Imágenes de stock con sujetos forzando expresiones ("mujer riendo al sol").
-- Banners, marcos, sombras paralelas, emojis grandes en la imagen.
-- Tipografías "manuscritas" decorativas. Nunca.
-- Fondos con texto incrustado (carteles, letreros) que compitan con el mensaje.
-- Filtros saturados estilo Instagram 2014.
-
-### Safe zones por plataforma
-
-| Plataforma | Lienzo | Margen seguro | Razón |
-|------------|--------|---------------|-------|
-| Instagram feed | 1080×1080 | 90 px en cada lado | Recortes en perfil/grid |
-| Instagram Reel / TikTok / YouTube Short | 1080×1920 | Texto entre `y=400` y `y=1500` | UI de botones, captions auto, perfil |
-| Facebook post | 1080×1080 | 90 px | Igual que IG |
-| YouTube thumbnail | 1280×720 | Texto fuera de los 100 px inferior derecha | El runtime se superpone ahí |
-| X / Twitter | 1200×675 | 80 px laterales | Crops en preview |
+- Texto sobre rostro frontal en primer plano.
+- Stock con sonrisas exageradas o team-building corporativo.
+- Marcos, sombras paralelas grandes, banners decorativos.
+- Tipografías "manuscritas" tipo Lobster, Pacifico, Brush Script. NUNCA.
+- Filtros saturados estilo "feed naranjado Instagram 2014".
+- Foto + emoji grande encima.
 
 ## Selección de fondos (Pexels)
 
 ### Criterios para aceptar un fondo
 
-- **Una sola idea visual.** Un horizonte, un árbol, una superficie de agua. No
-  collages.
-- **Resolución mínima 1920×1080**, sin compresión visible.
-- **Iluminación natural.** Evitar luces de estudio frontales o flashes.
-- **Sin rostros frontales** (los rostros roban atención al mensaje). Si hay
-  persona, de espaldas o de perfil, idealmente lejana en el encuadre.
-- **Profundidad.** Que haya un primer plano y un fondo, no una textura plana.
-- **Color compatible con la paleta del tema.** Si la foto trae colores
-  incompatibles, descartar.
+- **Una sola idea visual** (taza, ventana, persona en una sola acción).
+- **Resolución mínima 1920×1080**.
+- **Iluminación natural cálida o suave**, no de estudio.
+- **Sin rostros frontales en primer plano** que compitan con el texto.
+- **Profundidad fotográfica** (primer plano + fondo).
+- **Color compatible con la paleta del tema**.
+- **Sin texto incrustado** (logos de marcas, letreros).
 
-### Búsqueda Pexels — keywords por tema
+### Keywords Pexels por tema
 
 | Tema | Keywords primarias | Alternativas |
 |------|--------------------|--------------|
-| Resiliencia | mountain peak fog, storm clearing, rocky coast | cliff sunrise, lone tree wind |
-| Calma | calm lake mist, foggy forest, slow river | empty beach dawn, still water reflection |
-| Claridad | sunrise horizon, golden hour field, open sky | morning window light, fresh snow |
-| Propósito | forest path morning, distant lighthouse, country road | mountain trail, compass aerial |
-| Gratitud | warm sunset, wildflowers backlit, tea morning | hands holding light, candle indoor |
-| Presencia | raindrops window, single tree field, monk walking | zen garden, hands cup tea |
-| Coraje | ocean storm waves, eagle flight, lightning distant | climber silhouette, fire embers |
-| Sabiduría | starry sky milky way, ancient tree, old books | observatory night, lone reader |
+| Resiliencia | mountain peak fog, storm clearing | rocky coast, lone tree wind |
+| Calma | calm lake mist, foggy forest dawn | still water reflection, slow river |
+| Claridad | sunrise horizon, golden hour field | open sky, fresh snow |
+| Propósito | forest path morning, distant lighthouse | country road, mountain trail |
+| Gratitud | warm sunset, wildflowers backlit | tea morning, hands warm light |
+| Presencia | raindrops window, single tree field | zen garden, hands cup tea |
+| Coraje | ocean storm waves, eagle flight | climber silhouette, fire embers |
+| Sabiduría | starry sky milky way, ancient tree | old books, observatory night |
+| **Esperanza** | sunrise dawn light, warm morning sky | fresh start road, hopeful horizon |
+| **Amor propio** | self care moment, warm bath light | candle morning, mirror gentle |
+| **Empezar de nuevo** | sunrise road, open field morning | fresh path, new beginning sky |
+| **Ansiedad cotidiana** | evening sky calm, hand on heart | soft breath person, calming light |
+| **Autoestima** | confident portrait sunset, woman looking up | self portrait warm light |
+| **Soledad saludable** | person reading window, solo coffee morning | quiet apartment soft light, kitchen alone calm |
+| **Límites** | closed window light, open hand stop | boundary fence sunset, door soft light |
 
-### Fallback procedural
+### Fallback procedural (sin Pexels)
 
-Cuando Pexels no devuelve resultado o no hay API key, generar gradiente con
-Pillow usando dos colores de la paleta del tema (dominante → sombra) en
-diagonal a 135°. Añadir un grano sutil opcional (ruido 2-3%) para textura.
+Cuando Pexels no devuelve resultado, generar gradiente con Pillow usando dos
+colores de la paleta del tema (sombra → dominante) en diagonal a 135°. Añadir
+grano sutil (ruido 2-3%) para textura editorial.
 
-## Video vertical — composición específica
-
-### Estructura visual del Reel/Short/TikTok
+## Composición para video vertical (Reel/Short/TikTok)
 
 - **Aspect ratio:** 9:16, 1080×1920.
-- **Zona de texto principal:** entre `y=900` y `y=1400` (centro-bajo). Es la
-  zona menos invadida por la UI de cada plataforma.
-- **Hook visual en los 3 primeros segundos:** un movimiento de cámara lento
-  (paneo de naturaleza) + el título principal aparece en cuadro 1.
-- **Subtítulos:** Inter Bold 42-48 px, blanco con contorno negro 2 px o caja
-  semitransparente al 40% para legibilidad sin audio.
-- **Transiciones:** cortes secos. Nada de "swipe", "zoom in" agresivo o efectos
-  TikTok-nativos. Estética sobria.
+- **Subtítulos sincronizados** en zona central-baja (y≈1100), caja semi-
+  transparente adaptativa.
+- **Frame inicial del video** = primer cue del subtítulo + plano amplio.
+- **B-roll:** naturaleza lenta + manos haciendo algo cotidiano + cocina/casa
+  acogedora. Cada plano dura ≥3 segundos.
+- **Subtítulos:** Vollkorn Bold sobre caja `rgba(0,0,0,0.40)` con stroke
+  negro. Texto crema `#FAF3E7`. 6-12 palabras por cue máx.
+- **Pie de marca** discreto en la esquina inferior derecha durante todo el video.
 
-### B-roll
+## Validación visual antes de aprobar
 
-- Naturaleza en movimiento lento (olas, hojas al viento, nubes, lluvia).
-- Manos que escriben, té que se sirve, libro que se hojea — si encajan con el
-  guion. Pocos planos humanos, lejanos.
-- Cada plano dura mínimo 3 segundos. Cortes nerviosos rompen el tono de marca.
+1. ¿Se lee el mensaje en 2 segundos sobre una pantalla pequeña?
+2. ¿La caja garantiza contraste sobre el fondo elegido?
+3. ¿El mensaje está dentro de safe zone (no tapado por UI nativa)?
+4. ¿La paleta del tema y el color general del fondo se conversan?
+5. ¿Es reconocible como Mental Equilibrio sin ver el pie de marca?
 
-## Validación del frame final
-
-Antes de aprobar la imagen/video:
-
-1. ¿Se lee el mensaje en 2 segundos? Si no, simplificar.
-2. ¿Hay contraste suficiente? Aplicar gradiente si la foto es clara.
-3. ¿El mensaje está en safe zone? Reposicionar si invade UI.
-4. ¿La paleta es coherente con el tema? Si dudas, cambiar el fondo.
-5. ¿Se reconocería como marca sin ver el handle? Si no, la composición es
-   genérica; ajustar tipografía/espacio.
+Si alguno falla, descartar y regenerar.

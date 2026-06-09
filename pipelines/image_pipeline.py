@@ -35,19 +35,29 @@ class ImagePipeline:
         self.output_dir = output_dir or ensure_dir(self.settings.project_root / "tmp" / "images")
 
     def generate(self, message: str, theme: str, visual_spec: dict[str, Any]) -> dict[str, str]:
+        """Genera todos los formatos de imagen para redes sociales.
+
+        Antes el flujo era: 1 render de texto en master 1920×1080 → resize_cover
+        a cada formato. Eso recortaba los bordes y dejaba texto incompleto en
+        feed cuadrado (1080×1080).
+
+        Ahora: descarga UNA foto de Pexels grande, y para cada formato hace
+        resize_cover de la foto a las dimensiones del formato + render del
+        texto con el wrap correcto para ese lienzo. Sin recortes raros.
+        """
         keywords = visual_spec.get("search_keywords", [theme])
-        base_bg = fetch_pexels_photo(keywords)
+        # Pedimos foto grande para que cualquier resize_cover tenga material.
+        base_bg = fetch_pexels_photo(keywords, width=1920, height=1920)
         if base_bg is None:
             logger.info("Usando fondo gradiente (Pexels no disponible)")
-            base_bg = create_gradient_background(1920, 1080, theme)
+            base_bg = create_gradient_background(1920, 1920, theme)
 
-        master = render_text_overlay(base_bg, message, visual_spec)
         results: dict[str, str] = {}
-
         for name, (w, h) in EXPORTS.items():
+            sized_bg = resize_cover(base_bg, w, h)
+            rendered = render_text_overlay(sized_bg, message, visual_spec)
             out_path = self.output_dir / f"{name}.jpg"
-            sized = resize_cover(master, w, h)
-            sized.save(out_path, "JPEG", quality=92)
+            rendered.save(out_path, "JPEG", quality=92)
             results[name] = str(out_path)
             logger.info("Imagen exportada: %s (%dx%d)", name, w, h)
 
