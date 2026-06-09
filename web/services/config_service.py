@@ -197,5 +197,18 @@ def update_config(updates: dict[str, str]) -> dict[str, Any]:
     if not filtered:
         return {"ok": False, "message": "No hay cambios para guardar", "updated": []}
 
-    _write_env_map(filtered)
+    try:
+        _write_env_map(filtered)
+    except OSError as exc:
+        # Caso típico: .env montado como read-only en Docker. Reportar al
+        # panel en vez de fallar silenciosamente.
+        return {
+            "ok": False,
+            "message": (
+                f"No se pudo escribir {ENV_FILE.name}: {exc.strerror or exc}. "
+                "Verifica que el archivo no esté montado como read-only "
+                "(docker-compose.yml: ./.env:/app/.env sin :ro)."
+            ),
+            "updated": [],
+        }
     return {"ok": True, "message": f"Configuración guardada ({len(filtered)} variables)", "updated": list(filtered.keys())}

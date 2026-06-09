@@ -43,7 +43,9 @@ services:
       - ./data/chroma:/app/data/chroma
       - ./data/analytics:/app/data/analytics
       - ./tmp:/app/tmp
-      - ./.env:/app/.env:ro
+      # .env montado RW para que el panel pueda guardar las API keys.
+      # En los demás servicios sigue siendo :ro porque no escriben.
+      - ./.env:/app/.env
     ports:
       - "8080:8080"
     entrypoint: []
