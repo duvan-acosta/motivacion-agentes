@@ -113,16 +113,35 @@ Reglas innegociables:
 - visual_keywords: 3 términos en INGLÉS para búsqueda en Pexels (un sujeto, un
   ambiente, un detalle). Sin rostros frontales, sin gente sonriendo a cámara.
 
-Responde SOLO con JSON válido (sin texto fuera del JSON):
+Responde SOLO con JSON válido (sin texto fuera del JSON), con captions
+adaptados a cada plataforma:
+
 {{
-  "message": "mensaje principal 15-40 palabras",
-  "caption": "caption 4 bloques cortos separados por saltos de línea dobles",
+  "message": "mensaje principal de la imagen, 15-40 palabras",
+  "message_alt": "VARIANTE alternativa del mensaje, MISMO TEMA pero hook distinto, 15-40 palabras",
+  "caption_instagram": "caption largo IG: hook + 3-4 párrafos cortos + CTA cariñoso + 12-15 hashtags al final",
+  "caption_facebook": "caption FB conversacional, frases largas, 2-3 hashtags. Sin emojis. Pedir compartir explícito",
+  "caption_tiktok": "caption TikTok CORTO: hook + 1 línea de aliento + 4-6 hashtags. Máx 200 caracteres antes de hashtags",
+  "title_youtube": "título YouTube Short ≤60 caracteres, gancho directo emocional",
+  "caption_youtube": "descripción YouTube: hook + 2-3 párrafos + CTA + #Shorts al final",
+  "tweet": "tweet único ≤200 caracteres (deja espacio para la URL con UTM que añade el sistema), 0-2 hashtags",
   "hashtags": ["#tag1", "#tag2", ...],
   "visual_keywords": ["en_keyword_1", "en_keyword_2", "en_keyword_3"]
 }}
 
-Hashtags: 12-15, mezclando amplios + medios + nicho. Sin tildes. Incluye
-2-3 del set base de marca: {', '.join(base_tags[:5])}."""
+Reglas por plataforma (alineadas con RAG de algoritmo):
+- INSTAGRAM: tono cálido reflexivo, pide guardar > pide compartir, sin emojis.
+- FACEBOOK: ligeramente más conversacional, frases más largas, "Compartelo con
+  alguien que necesite leerlo" funciona muy bien aquí.
+- TIKTOK: hook visual va en el video, el caption es solo apoyo corto.
+- YOUTUBE: descripción tipo IG + obligatorio #Shorts al final.
+- X/TWITTER: tweet AUTÓNOMO ≤200 chars (el sistema añade ~80 chars de URL+UTM).
+
+Hashtags principales: 12-15, sin tildes. Incluye 2-3 del set base de marca:
+{', '.join(base_tags[:5])}.
+
+El "message_alt" sirve para A/B test: misma temática, otro hook (si el
+principal usa "Hoy puedes…", el alt usa "Está bien que…" o "Recuerda esto:")."""
 
     def _parse_llm_response(self, text: str) -> dict[str, Any]:
         match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -174,7 +193,15 @@ Hashtags: 12-15, mezclando amplios + medios + nicho. Sin tildes. Incluye
                 "theme": theme,
                 "content_id": content_id,
                 "message": data["message"],
-                "caption": data["caption"],
+                "message_alt": data.get("message_alt", ""),
+                # caption "legacy" para compatibilidad (usa el de IG por defecto)
+                "caption": data.get("caption_instagram") or data.get("caption", ""),
+                "caption_instagram": data.get("caption_instagram", ""),
+                "caption_facebook": data.get("caption_facebook", ""),
+                "caption_tiktok": data.get("caption_tiktok", ""),
+                "caption_youtube": data.get("caption_youtube", ""),
+                "title_youtube": data.get("title_youtube", ""),
+                "tweet": data.get("tweet", ""),
                 "hashtags": data.get("hashtags", []),
                 "visual_keywords": data.get("visual_keywords", [theme]),
                 "script": "",
@@ -186,7 +213,14 @@ Hashtags: 12-15, mezclando amplios + medios + nicho. Sin tildes. Incluye
                 "theme": theme,
                 "content_id": content_id or demo["content_id"],
                 "message": demo["message"],
+                "message_alt": "",
                 "caption": demo["caption"],
+                "caption_instagram": demo["caption"],
+                "caption_facebook": demo["caption"],
+                "caption_tiktok": demo["message"],
+                "caption_youtube": demo["caption"],
+                "title_youtube": demo["message"][:60],
+                "tweet": demo["message"][:200],
                 "hashtags": demo["hashtags"],
                 "visual_keywords": demo["visual_keywords"],
                 "script": demo.get("script", ""),

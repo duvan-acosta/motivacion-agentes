@@ -67,6 +67,15 @@ class PublisherAgent:
 
         hashtag_text = " ".join(hashtags)
         product = get_active_product()
+        # Captions adaptados por plataforma (vienen del ContentCreator). Si
+        # vienen vacíos, caemos a un fallback razonable.
+        captions = (metadata or {}).get("captions", {}) if metadata else {}
+        ig_caption = captions.get("instagram") or caption
+        fb_caption = captions.get("facebook") or caption
+        tt_caption_llm = captions.get("tiktok") or message
+        yt_caption_llm = captions.get("youtube") or caption
+        yt_title_llm = captions.get("title_youtube") or message[:60]
+        tweet_llm = captions.get("tweet") or message
 
         def _with_cta(text: str, platform: str) -> str:
             if not product:
@@ -77,35 +86,34 @@ class PublisherAgent:
         ig_dir = ensure_dir(base / "instagram")
         self._copy_if_exists(images.get("instagram_feed"), ig_dir / "feed.jpg")
         self._copy_if_exists(video_path, ig_dir / "reel.mp4")
-        (ig_dir / "caption.txt").write_text(_with_cta(caption, "instagram"), encoding="utf-8")
+        (ig_dir / "caption.txt").write_text(_with_cta(ig_caption, "instagram"), encoding="utf-8")
         (ig_dir / "hashtags.txt").write_text(hashtag_text, encoding="utf-8")
 
         tt_dir = ensure_dir(base / "tiktok")
         self._copy_if_exists(video_path, tt_dir / "video.mp4")
-        tt_caption = f"{message}\n\n{hashtag_text}"[:2000]
-        (tt_dir / "caption.txt").write_text(_with_cta(tt_caption, "tiktok"), encoding="utf-8")
+        # TikTok: caption corto del LLM + 4-6 hashtags relevantes (subset).
+        tt_hashtags = " ".join(hashtags[:6])
+        tt_full = f"{tt_caption_llm}\n\n{tt_hashtags}"[:2000]
+        (tt_dir / "caption.txt").write_text(_with_cta(tt_full, "tiktok"), encoding="utf-8")
 
         fb_dir = ensure_dir(base / "facebook")
         self._copy_if_exists(images.get("facebook_post"), fb_dir / "post.jpg")
         self._copy_if_exists(video_path, fb_dir / "reel.mp4")
-        (fb_dir / "caption.txt").write_text(_with_cta(caption, "facebook"), encoding="utf-8")
+        (fb_dir / "caption.txt").write_text(_with_cta(fb_caption, "facebook"), encoding="utf-8")
 
         yt_dir = ensure_dir(base / "youtube")
         self._copy_if_exists(video_path, yt_dir / "short.mp4")
         self._copy_if_exists(images.get("youtube_thumb"), yt_dir / "thumbnail.jpg")
-        yt = demo_youtube_meta(message, theme)
-        (yt_dir / "title.txt").write_text(yt["title"], encoding="utf-8")
+        yt_demo = demo_youtube_meta(message, theme)
+        (yt_dir / "title.txt").write_text(yt_title_llm[:100], encoding="utf-8")
         (yt_dir / "description.txt").write_text(
-            _with_cta(yt["description"], "youtube"), encoding="utf-8"
+            _with_cta(yt_caption_llm, "youtube"), encoding="utf-8"
         )
-        (yt_dir / "tags.txt").write_text(yt["tags"], encoding="utf-8")
+        (yt_dir / "tags.txt").write_text(yt_demo["tags"], encoding="utf-8")
 
         tw_dir = ensure_dir(base / "twitter")
         self._copy_if_exists(images.get("twitter_image"), tw_dir / "image.jpg")
-        # En X la URL clicable va en el tweet; reservamos ~70 chars del límite.
-        tweet_base = demo_tweet(message, theme)
-        if product:
-            tweet_base = tweet_base[:200]  # deja espacio para el CTA + URL
+        tweet_base = tweet_llm[:200] if tweet_llm else demo_tweet(message, theme)
         (tw_dir / "tweet.txt").write_text(_with_cta(tweet_base, "twitter"), encoding="utf-8")
 
         manifest = self._build_manifest(base)

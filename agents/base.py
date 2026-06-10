@@ -9,7 +9,14 @@ class WorkflowState(TypedDict, total=False):
     theme: str
     content_id: str
     message: str
+    message_alt: str  # variante para A/B test
     caption: str
+    caption_instagram: str
+    caption_facebook: str
+    caption_tiktok: str
+    caption_youtube: str
+    title_youtube: str
+    tweet: str
     hashtags: list[str]
     visual_keywords: list[str]
     visual_spec: dict[str, Any]

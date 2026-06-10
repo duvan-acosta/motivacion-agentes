@@ -48,7 +48,14 @@ class MotivacionWorkflow:
         result = self.content.generate(state["theme"], state.get("content_id"))
         state["content_id"] = result["content_id"]
         state["message"] = result["message"]
+        state["message_alt"] = result.get("message_alt", "")
         state["caption"] = result["caption"]
+        state["caption_instagram"] = result.get("caption_instagram", "")
+        state["caption_facebook"] = result.get("caption_facebook", "")
+        state["caption_tiktok"] = result.get("caption_tiktok", "")
+        state["caption_youtube"] = result.get("caption_youtube", "")
+        state["title_youtube"] = result.get("title_youtube", "")
+        state["tweet"] = result.get("tweet", "")
         state["hashtags"] = result["hashtags"]
         state["visual_keywords"] = result["visual_keywords"]
         if result.get("script"):
@@ -96,6 +103,23 @@ class MotivacionWorkflow:
         return state
 
     def _node_package(self, state: WorkflowState) -> WorkflowState:
+        metadata = dict(state.get("metadata") or {})
+        # Captions adaptados por plataforma (si están vacíos, el Publisher cae
+        # a fallback razonable).
+        metadata["captions"] = {
+            "instagram": state.get("caption_instagram", "") or state.get("caption", ""),
+            "facebook": state.get("caption_facebook", "") or state.get("caption", ""),
+            "tiktok": state.get("caption_tiktok", ""),
+            "youtube": state.get("caption_youtube", ""),
+            "title_youtube": state.get("title_youtube", ""),
+            "tweet": state.get("tweet", ""),
+        }
+        # Hooks A/B para registro futuro.
+        if state.get("message_alt"):
+            metadata["hooks_ab"] = {
+                "primary": state["message"],
+                "alternative": state["message_alt"],
+            }
         package = self.publisher.package(
             content_id=state["content_id"],
             theme=state["theme"],
@@ -105,7 +129,7 @@ class MotivacionWorkflow:
             script=state.get("script", ""),
             images=state.get("images", {}),
             video_path=state.get("video_path", ""),
-            metadata=state.get("metadata"),
+            metadata=metadata,
         )
         state["package_path"] = str(package)
         state["status"] = "ready"
