@@ -89,11 +89,36 @@ def test_corpus_documents_banned_phrases(banned):
     )
 
 
+def _normalize(text: str) -> str:
+    """Minúsculas, sin acentos y con '_' como espacio para comparar temas.
+
+    Los temas en brand.yaml usan snake_case (``amor_propio``) y el corpus los
+    titula con espacios y acentos (``Amor propio``, ``Límites``).
+    """
+    import unicodedata
+
+    text = text.replace("_", " ").lower()
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text)
+        if unicodedata.category(c) != "Mn"
+    )
+
+
 def test_filosofia_covers_all_themes():
-    text = (KNOWLEDGE_DIR / "filosofia-es.md").read_text(encoding="utf-8").lower()
-    for theme in ("resiliencia", "calma", "claridad", "propósito", "gratitud",
-                  "presencia", "coraje", "sabiduría"):
-        assert theme.lower() in text, f"Tema '{theme}' ausente en filosofia-es.md"
+    """Cada tema que el DirectorAgent rota (brand.yaml) debe existir en el corpus.
+
+    Leer la lista desde brand.yaml evita que el test se desincronice cuando se
+    reorienta la marca (la fuente de verdad es ``themes_rotation``).
+    """
+    import yaml
+
+    brand = yaml.safe_load((KNOWLEDGE_DIR.parent.parent / "config" / "brand.yaml").read_text(encoding="utf-8"))
+    themes = brand.get("content", {}).get("themes_rotation", [])
+    assert themes, "themes_rotation vacío en brand.yaml"
+
+    text = _normalize((KNOWLEDGE_DIR / "filosofia-es.md").read_text(encoding="utf-8"))
+    for theme in themes:
+        assert _normalize(theme) in text, f"Tema '{theme}' ausente en filosofia-es.md"
 
 
 def test_visual_has_palette_per_theme():

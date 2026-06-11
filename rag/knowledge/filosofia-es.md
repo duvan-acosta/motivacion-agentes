@@ -189,6 +189,7 @@ Estas frases son CRINGE en LatAm y deben evitarse:
 - "Manifiéstalo y vendrá."
 - "Vibras altas."
 - "Tu mejor versión."
+- "Cree en ti."
 - "Sé positiva siempre."
 - "Solo piensa en positivo."
 - "El universo conspira a tu favor."
