@@ -57,6 +57,20 @@ class Settings(BaseSettings):
     x_access_token_secret: str = Field(default="", alias="X_ACCESS_TOKEN_SECRET")
     x_bearer_token: str = Field(default="", alias="X_BEARER_TOKEN")
 
+    # Pinterest: API v5. Sube la imagen en base64 (no requiere media host).
+    # Modo simple: PINTEREST_ACCESS_TOKEN estático (Trial access, para empezar).
+    # Modo desatendido: refresh_token + app_id + app_secret → el access token se
+    # renueva solo (el estático caduca en semanas).
+    pinterest_access_token: str = Field(default="", alias="PINTEREST_ACCESS_TOKEN")
+    pinterest_board_id: str = Field(default="", alias="PINTEREST_BOARD_ID")
+    pinterest_app_id: str = Field(default="", alias="PINTEREST_APP_ID")
+    pinterest_app_secret: str = Field(default="", alias="PINTEREST_APP_SECRET")
+    pinterest_refresh_token: str = Field(default="", alias="PINTEREST_REFRESH_TOKEN")
+
+    # Plataformas que el scheduler publica automáticamente tras generar.
+    # Coma-separado, ej: "pinterest" o "pinterest,instagram". Vacío = solo genera.
+    auto_publish_platforms: str = Field(default="", alias="AUTO_PUBLISH_PLATFORMS")
+
     # Hosting público de media (las APIs requieren URL pública, no bytes)
     media_host_provider: str = Field(default="none", alias="MEDIA_HOST_PROVIDER")
     media_public_base_url: str = Field(default="", alias="MEDIA_PUBLIC_BASE_URL")
@@ -119,6 +133,21 @@ class Settings(BaseSettings):
             and self.x_access_token
             and self.x_access_token_secret
         )
+
+    def has_pinterest(self) -> bool:
+        if not self.pinterest_board_id:
+            return False
+        if self.pinterest_access_token:
+            return True
+        # Modo refresh: sin token estático pero con credenciales para renovarlo.
+        return bool(
+            self.pinterest_refresh_token
+            and self.pinterest_app_id
+            and self.pinterest_app_secret
+        )
+
+    def auto_publish_list(self) -> list[str]:
+        return [p.strip().lower() for p in self.auto_publish_platforms.split(",") if p.strip()]
 
     def has_media_host(self) -> bool:
         provider = self.media_host_provider.lower()

@@ -22,6 +22,8 @@ _CREDENTIAL_ENV = [
     "X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET",
     "MEDIA_HOST_PROVIDER", "MEDIA_PUBLIC_BASE_URL", "S3_BUCKET",
     "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "CLOUDINARY_URL",
+    "PINTEREST_ACCESS_TOKEN", "PINTEREST_BOARD_ID", "PINTEREST_APP_ID",
+    "PINTEREST_APP_SECRET", "PINTEREST_REFRESH_TOKEN", "AUTO_PUBLISH_PLATFORMS",
 ]
 
 
@@ -40,8 +42,11 @@ def make_settings(monkeypatch, tmp_path):
     """
 
     def _factory(**env: str):
+        # Forzar vacío (no delenv): Settings lee env_file=".env", así que borrar
+        # la variable del entorno haría que pydantic la recargue del .env real.
+        # Una env var vacía sí tiene precedencia sobre el archivo .env.
         for key in _CREDENTIAL_ENV:
-            monkeypatch.delenv(key, raising=False)
+            monkeypatch.setenv(key, "")
         monkeypatch.setenv("PUBLICATION_QUEUE_DIR", str(tmp_path / "queue"))
         monkeypatch.setenv("CHROMA_PERSIST_DIR", str(tmp_path / "chroma"))
         for key, value in env.items():

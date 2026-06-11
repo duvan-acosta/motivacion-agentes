@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from utils.config import ensure_dir, get_settings
@@ -151,6 +152,12 @@ class RAGStore:
             logger.warning("Query RAG falló, fallback: %s", exc)
             return self._fallback_query(collection_name, query_text, n_results)
 
+    @staticmethod
+    def _tokenize(text: str) -> set[str]:
+        # \w+ ignora markdown y puntuación: "**resiliencia**" -> {"resiliencia"}.
+        # Sin esto, el formato del corpus (negritas, viñetas) rompe el match.
+        return set(re.findall(r"\w+", text.lower()))
+
     def _fallback_query(self, collection_name: str, query_text: str, n_results: int) -> list[str]:
         files = COLLECTIONS.get(collection_name, [])
         chunks: list[str] = []
@@ -159,11 +166,10 @@ class RAGStore:
             chunks.extend(self._chunk_text(content))
         if not chunks:
             return []
-        query_words = set(query_text.lower().split())
+        query_words = self._tokenize(query_text)
         scored = []
         for chunk in chunks:
-            words = set(chunk.lower().split())
-            score = len(query_words & words)
+            score = len(query_words & self._tokenize(chunk))
             scored.append((score, chunk))
         scored.sort(key=lambda x: x[0], reverse=True)
         return [c for _, c in scored[:n_results]]
