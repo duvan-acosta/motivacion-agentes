@@ -58,7 +58,9 @@ def generate(theme: str | None, demo: bool) -> None:
     "--platform",
     "-p",
     multiple=True,
-    type=click.Choice(["instagram", "facebook", "tiktok", "youtube", "twitter"]),
+    type=click.Choice(
+        ["instagram", "facebook", "tiktok", "youtube", "twitter", "pinterest"]
+    ),
     help="Plataforma(s) a publicar",
 )
 def publish(package_path: Path, platform: tuple[str, ...]) -> None:

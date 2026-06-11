@@ -35,6 +35,7 @@ def _status(pkg: Path) -> dict:
         ("publishing.adapters.tiktok", "TikTokAdapter", "tiktok"),
         ("publishing.adapters.youtube", "YouTubeAdapter", "youtube"),
         ("publishing.adapters.twitter", "TwitterAdapter", "twitter"),
+        ("publishing.adapters.pinterest", "PinterestAdapter", "pinterest"),
     ],
 )
 def test_adapter_manual_fallback_without_credentials(make_settings, tmp_path, module, cls, platform):

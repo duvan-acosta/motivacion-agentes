@@ -16,6 +16,7 @@ from agents.visual_designer import VisualDesignerAgent
 from pipelines.image_pipeline import ImagePipeline
 from pipelines.video_pipeline import VideoPipeline
 from publishing.adapters.meta_instagram import MetaInstagramAdapter
+from publishing.adapters.pinterest import PinterestAdapter
 from publishing.adapters.tiktok import TikTokAdapter
 from publishing.adapters.twitter import TwitterAdapter
 from publishing.adapters.youtube import YouTubeAdapter
@@ -170,6 +171,7 @@ class MotivacionWorkflow:
             "tiktok": TikTokAdapter(),
             "youtube": YouTubeAdapter(),
             "twitter": TwitterAdapter(),
+            "pinterest": PinterestAdapter(),
         }
         targets = platforms or list(adapters.keys())
         results = []
