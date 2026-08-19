@@ -77,6 +77,22 @@ class Settings(BaseSettings):
     schedule_minute: int = Field(default=0, alias="SCHEDULE_MINUTE")
     timezone: str = Field(default="Europe/Madrid", alias="TIMEZONE")
 
+    # Browser publisher — credenciales de plataformas (sin APIs)
+    ig_username: str = Field(default="", alias="IG_USERNAME")
+    ig_password: str = Field(default="", alias="IG_PASSWORD")
+    tiktok_username: str = Field(default="", alias="TIKTOK_USERNAME")
+    tiktok_password: str = Field(default="", alias="TIKTOK_PASSWORD")
+    fb_email: str = Field(default="", alias="FB_EMAIL")
+    fb_password: str = Field(default="", alias="FB_PASSWORD")
+    fb_page_name: str = Field(default="", alias="FB_PAGE_NAME")
+    x_username: str = Field(default="", alias="X_USERNAME")
+    x_password: str = Field(default="", alias="X_PASSWORD")
+
+    # Auto-publicar vía navegador tras generar contenido
+    auto_publish_browser: bool = Field(default=False, alias="AUTO_PUBLISH_BROWSER")
+    browser_headless: bool = Field(default=True, alias="BROWSER_HEADLESS")
+    browser_platforms: str = Field(default="instagram,tiktok,facebook", alias="BROWSER_PLATFORMS")
+
     @property
     def project_root(self) -> Path:
         return PROJECT_ROOT
@@ -119,6 +135,13 @@ class Settings(BaseSettings):
             and self.x_access_token
             and self.x_access_token_secret
         )
+
+    def has_browser_publisher(self) -> bool:
+        return bool(self.ig_username or self.tiktok_username or self.fb_email or self.x_username)
+
+    @property
+    def browser_platform_list(self) -> list[str]:
+        return [p.strip() for p in self.browser_platforms.split(",") if p.strip()]
 
     def has_media_host(self) -> bool:
         provider = self.media_host_provider.lower()

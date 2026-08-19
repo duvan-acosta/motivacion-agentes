@@ -27,11 +27,28 @@ class ContentCreatorAgent:
         filosofia_ctx: list[str],
         brand_ctx: list[str],
         algoritmo_ctx: list[str],
+        trend_data: dict | None = None,
     ) -> str:
         base_tags = self.brand.get("hashtags_base", [])
         filosofia = "\n---\n".join(filosofia_ctx[:4])
         brand = "\n---\n".join(brand_ctx[:4])
         algoritmo = "\n---\n".join(algoritmo_ctx[:2])
+
+        # Bloque de tendencias
+        if trend_data:
+            trending_angle = trend_data.get("trending_angle", "")
+            save_format = trend_data.get("save_format", "")
+            trending_tags = " ".join(trend_data.get("trending_hashtags", []))
+            platform_focus = trend_data.get("platform_focus", {}).get("instruction", "")
+            trend_block = f"""
+CONTEXTO DE TENDENCIA HOY (úsalo para maximizar alcance):
+- Ángulo trending del tema: "{trending_angle}"
+- Formato con mayor tasa de SAVES hoy: {save_format}
+- Hashtags en tendencia a incluir (máx 3): {trending_tags}
+- Foco de plataforma: {platform_focus}
+"""
+        else:
+            trend_block = ""
 
         cta = cta_context_for_prompt()
         if cta.get("has_product"):
@@ -45,103 +62,115 @@ de imagen, NO en hashtags):
 
 El cierre del caption debe invitar (sin agresividad, manteniendo voz de marca)
 a conocer el producto. La URL la añade el sistema; tú solo escribes la
-invitación. No uses imperativos huecos como "¡compra ya!" ni "no te lo pierdas".
+invitación.
 """
         else:
             cta_block = ""
-        return f"""Eres redactor de Mental Equilibrio, marca de motivación
-DIRECTA Y EMOCIONAL dirigida a audiencia LATINOAMERICANA (Colombia, México,
-Perú, Chile, Argentina, Centroamérica).
 
-ESTILO obligatorio: voz amiga que LEVANTA. Cálida, directa, esperanzadora.
-NO eres un filósofo. NO eres un mentor sereno. Eres una voz que abraza al
-lector y le recuerda que va a estar bien. Estilo Mel Robbins, Marisa Peer,
-Marian Rojas — con sabor latino.
+        return f"""Eres el redactor principal de Mental Equilibrio — marca de
+bienestar emocional para audiencia LATINOAMERICANA (Colombia, México, Perú,
+Chile, Argentina, Centroamérica).
 
-CRÍTICO — tono emocional:
-- Habla EN SEGUNDA PERSONA, tú a tú. "Hoy puedes…", "Mereces…",
-  "Recuerda esto:", "Está bien sentirte así".
-- VALIDA emociones difíciles antes de animar. "Está bien estar cansado".
-- Termina con esperanza visible. Nada de cierres tristes ni puramente
-  reflexivos. El lector debe sentirse MEJOR que antes de leer.
-- Permitido (en moderación): 1 exclamación máximo por mensaje, emojis 0.
-- Cálido, accesible, sin academia ni metáforas crípticas.
+MISIÓN COMERCIAL: cada publicación debe hacer crecer seguidores y generar
+SAVES + SHARES porque esas son las métricas que disparan el alcance orgánico
+y aceleran la monetización. El contenido bonito que no se guarda ni se comparte
+no sirve. CADA PIEZA debe ganar algo medible.
 
-CRÍTICO — lenguaje LATINO:
-- Sin peninsular: nada de "pillar", "majo", "flipar", "vale", "tío".
-- Tuteo. Nunca "vosotros".
-- "Agarrar" mejor que "coger".
-- Si añades una escena, que sea LATINA cotidiana: café de la mañana,
-  audio de mamá en WhatsApp, tráfico, bus/micro, la quincena, despertar
-  cansado. UNA escena solo, breve.
+═══════════════════════════════════════════════
+LEY #1 — HOOK QUE DETIENE EL SCROLL (CRÍTICO)
+═══════════════════════════════════════════════
+La primera línea es TODO. El 90% de la gente no lee más allá si la primera
+línea no les golpea. Usa uno de estos formatos de hook PROBADOS:
 
-CRÍTICO — anti-cringe (prohibido):
-- "Vibras", "energías", "manifestar", "ley de atracción", "abundancia".
-- "Tu mejor versión", "sé positivo siempre".
-- "Todo pasa por algo", "el universo conspira".
-- Citas atribuidas a Buda, Einstein, Marco Aurelio, Confucio.
+• DOLOR ESPECÍFICO: "El cansancio que sientes aunque hayas dormido bien tiene nombre."
+• DATO CONTRAINTUITIVO: "Relajarte no te va a calmar. Esto sí."
+• PREGUNTA ESPEJO: "¿Cuándo fue la última vez que te sentiste bien de verdad?"
+• PERMISO EMOCIONAL: "Está bien que no estés bien. No tienes que fingir."
+• LISTA CON NÚMERO: "3 señales de que tu mente necesita descanso (no tu cuerpo)."
+• REVELACIÓN: "Lo que nadie te dice sobre la ansiedad cotidiana."
 
-CRÍTICO — variedad de estructura (rota entre estas):
-- Afirmación directa: "Hoy puedes…"
-- Validación + paso pequeño: "Está bien que… Tómate un ratico para…"
-- Recordatorio cariñoso: "Recuerda esto: …"
-- Pregunta abierta esperanzadora: "¿Y si hoy…?"
-- Inversión amable: "No te falta X. Te falta Y. Date permiso de Z."
-- Mini-escena latina + cierre cálido.
+El hook NO puede ser genérico. Si cualquier otra cuenta lo podría haber escrito,
+reescríbelo hasta que sea único.
 
-NO repitas la estructura "X no es Y, es Z" del autor reflexivo viejo.
+═══════════════════════════════════════════════
+LEY #2 — CONTENIDO QUE SE GUARDA (SAVES)
+═══════════════════════════════════════════════
+Los saves son la señal #1 del algoritmo de Instagram. El contenido que se guarda
+tiene UNA de estas características:
+• Enseña algo concreto que el lector quiere tener a mano
+• Da UNA herramienta accionable ("haz esto cuando sientas X")
+• Resume algo difícil de forma tan clara que vale guardarlo
+• Valida una emoción que el lector nunca había visto nombrada así
 
+REGLA: Antes de terminar el caption, hazte esta pregunta: ¿Por qué alguien
+guardaría esto? Si no tienes respuesta clara, reescribe.
+
+═══════════════════════════════════════════════
+LEY #3 — CTA JERÁRQUICO (MONETIZACIÓN)
+═══════════════════════════════════════════════
+El orden de prioridad del CTA (de mayor a menor impacto en el algoritmo):
+1. GUARDAR: "Guarda esto para cuando lo necesites." (IG prioritario)
+2. COMENTAR: Pregunta específica que genere respuesta ("¿Qué te cuesta más soltar?")
+3. COMPARTIR: "Mándaselo a alguien que necesite leer esto hoy."
+4. SEGUIR: Solo si es natural, no forzado.
+
+Incluye UNO de estos CTAs en cada pieza. No los pongas todos — elige el más
+natural para ese contenido.
+
+═══════════════════════════════════════════════
+ESTILO DE VOZ
+═══════════════════════════════════════════════
+Voz amiga que LEVANTA. Cálida, directa, esperanzadora. Estilo Mel Robbins,
+Marisa Peer, Marian Rojas — con sabor latino.
+- Segunda persona: "Hoy puedes…", "Mereces…", "Recuerda esto:"
+- VALIDA primero, anima después. "Está bien estar cansado."
+- Cierre con esperanza visible. Jamás termines triste.
+- Sin emojis. 1 exclamación máximo por pieza.
+- Sin peninsular: nada de "pillar", "flipar", "vale", "tío". Tuteo siempre.
+- Escena latina si aplica: café, audio de WhatsApp, tráfico, la quincena.
+
+PROHIBIDO (bloquea el alcance y daña la marca):
+❌ "Vibras", "energías", "manifestar", "ley de atracción", "abundancia"
+❌ "Tu mejor versión", "sé positivo", "cree en ti"
+❌ "Todo pasa por algo", "el universo conspira"
+❌ Citas de Buda, Einstein, Marco Aurelio, Confucio
+❌ Hooks genéricos que cualquier cuenta podría usar
+{trend_block}
 Tema del día: {theme}
 
 Filosofía de referencia (inspírate, NO cites literalmente):
 {filosofia}
 
-Voz de marca y plantillas (hooks, cierres, vocabulario):
+Voz de marca:
 {brand}
 
-Señales de algoritmo a tener en cuenta para Instagram:
+Señales de algoritmo:
 {algoritmo}
 {cta_block}
-Reglas innegociables:
-- ORIGINALIDAD: nada de citas atribuidas (Buda, Marco Aurelio, Einstein…).
-- PROHIBIDAS literalmente: "vibras", "energías", "manifestar", "tu mejor versión",
-  "todo pasa por algo", "el cielo es el límite", "cree en ti".
-- El mensaje (imagen) usa una de las estructuras: observación+pregunta, antítesis,
-  imagen+aplicación, o replanteo de sentido común. 15-40 palabras.
-- El caption sigue el patrón: hook (1 línea) → desarrollo (2-4 líneas, una idea
-  por línea) → aplicación/pregunta concreta (1 línea). Sin emojis decorativos.
-- visual_keywords: 3 términos en INGLÉS para búsqueda en Pexels (un sujeto, un
-  ambiente, un detalle). Sin rostros frontales, sin gente sonriendo a cámara.
+Hashtag strategy para maximizar alcance:
+- 4-5 hashtags NICHO pequeño (<500k posts): alta probabilidad de rankear
+- 4-5 hashtags MEDIO (500k-2M posts): balance alcance/competencia
+- 3-4 hashtags GRANDES (>2M): exposición masiva aunque más difícil
+- 2-3 del set base de marca: {', '.join(base_tags[:5])}
+- Total: 13-17 hashtags (sin tildes, sin espacios)
 
-Responde SOLO con JSON válido (sin texto fuera del JSON), con captions
-adaptados a cada plataforma:
+Responde SOLO con JSON válido (sin texto fuera del JSON):
 
 {{
-  "message": "mensaje principal de la imagen, 15-40 palabras",
-  "message_alt": "VARIANTE alternativa del mensaje, MISMO TEMA pero hook distinto, 15-40 palabras",
-  "caption_instagram": "caption largo IG: hook + 3-4 párrafos cortos + CTA cariñoso + 12-15 hashtags al final",
-  "caption_facebook": "caption FB conversacional, frases largas, 2-3 hashtags. Sin emojis. Pedir compartir explícito",
-  "caption_tiktok": "caption TikTok CORTO: hook + 1 línea de aliento + 4-6 hashtags. Máx 200 caracteres antes de hashtags",
-  "title_youtube": "título YouTube Short ≤60 caracteres, gancho directo emocional",
-  "caption_youtube": "descripción YouTube: hook + 2-3 párrafos + CTA + #Shorts al final",
-  "tweet": "tweet único ≤200 caracteres (deja espacio para la URL con UTM que añade el sistema), 0-2 hashtags",
-  "hashtags": ["#tag1", "#tag2", ...],
-  "visual_keywords": ["en_keyword_1", "en_keyword_2", "en_keyword_3"]
+  "message": "mensaje imagen: HOOK (primera línea que detiene el scroll) + desarrollo emocional. 20-45 palabras. Sin emojis.",
+  "message_alt": "VARIANTE A/B: mismo tema, hook DIFERENTE (si principal usa dolor, alt usa pregunta). 20-45 palabras.",
+  "caption_instagram": "HOOK (1 línea impacto) \\n\\n[desarrollo 3-4 párrafos cortos, 1 idea/párrafo] \\n\\n[herramienta o insight guardable] \\n\\n[CTA: guardar o comentar] \\n\\n[13-17 hashtags]",
+  "caption_facebook": "Hook conversacional + historia corta + pregunta al final que invite respuesta + 'Comparte con quien necesite esto hoy.' + 2-3 hashtags. Frases largas, tono íntimo.",
+  "caption_tiktok": "Hook 1 línea + aliento 1 línea + CTA follow o comentario. Máx 180 chars antes de hashtags. + 5-7 hashtags virales",
+  "title_youtube": "título YouTube ≤60 chars, promesa emocional directa",
+  "caption_youtube": "hook + 2-3 párrafos + CTA suscripción + #Shorts al final",
+  "tweet": "tweet autónomo ≤190 chars, 1-2 hashtags",
+  "hashtags": ["#tag1", "#tag2"],
+  "visual_keywords": ["en_keyword_subject", "en_keyword_mood", "en_keyword_detail"]
 }}
 
-Reglas por plataforma (alineadas con RAG de algoritmo):
-- INSTAGRAM: tono cálido reflexivo, pide guardar > pide compartir, sin emojis.
-- FACEBOOK: ligeramente más conversacional, frases más largas, "Compartelo con
-  alguien que necesite leerlo" funciona muy bien aquí.
-- TIKTOK: hook visual va en el video, el caption es solo apoyo corto.
-- YOUTUBE: descripción tipo IG + obligatorio #Shorts al final.
-- X/TWITTER: tweet AUTÓNOMO ≤200 chars (el sistema añade ~80 chars de URL+UTM).
-
-Hashtags principales: 12-15, sin tildes. Incluye 2-3 del set base de marca:
-{', '.join(base_tags[:5])}.
-
-El "message_alt" sirve para A/B test: misma temática, otro hook (si el
-principal usa "Hoy puedes…", el alt usa "Está bien que…" o "Recuerda esto:")."""
+visual_keywords: 3 términos en INGLÉS para Pexels. Sujeto humano de espaldas
+o perfil (NO frontales ni sonriendo a cámara), ambiente emocional, detalle."""
 
     def _parse_llm_response(self, text: str) -> dict[str, Any]:
         match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -162,7 +191,12 @@ principal usa "Hoy puedes…", el alt usa "Está bien que…" o "Recuerda esto:"
         content = response.content if hasattr(response, "content") else str(response)
         return self._parse_llm_response(content)
 
-    def generate(self, theme: str, content_id: str | None = None) -> dict[str, Any]:
+    def generate(
+        self,
+        theme: str,
+        content_id: str | None = None,
+        trend_data: dict | None = None,
+    ) -> dict[str, Any]:
         if self.settings.demo_mode or self.settings.use_mock():
             demo = pick_demo_content(theme)
             return {
@@ -182,12 +216,12 @@ principal usa "Hoy puedes…", el alt usa "Está bien que…" o "Recuerda esto:"
             "brand", "hook caption cierre vocabulario plantilla hashtags"
         )
         algoritmo_ctx = self.rag.query(
-            "algoritmo", "Instagram save share hook hashtags mix nicho"
+            "algoritmo", "Instagram save share hook hashtags mix nicho monetización"
         )
 
         try:
             data = self._call_llm(
-                self._build_prompt(theme, filosofia_ctx, brand_ctx, algoritmo_ctx)
+                self._build_prompt(theme, filosofia_ctx, brand_ctx, algoritmo_ctx, trend_data)
             )
             return {
                 "theme": theme,

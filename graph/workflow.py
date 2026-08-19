@@ -8,9 +8,11 @@ from typing import Any
 from langgraph.graph import END, StateGraph
 
 from agents.base import WorkflowState
+from agents.browser_publisher import BrowserPublisherAgent
 from agents.content_creator import ContentCreatorAgent
 from agents.director import DirectorAgent
 from agents.publisher import PublisherAgent
+from agents.trend import TrendAgent
 from agents.video_producer import VideoProducerAgent
 from agents.visual_designer import VisualDesignerAgent
 from pipelines.image_pipeline import ImagePipeline
@@ -27,14 +29,27 @@ logger = logging.getLogger(__name__)
 class MotivacionWorkflow:
     def __init__(self) -> None:
         self.settings = get_settings()
+        self.trend = TrendAgent()
         self.director = DirectorAgent()
         self.content = ContentCreatorAgent()
         self.visual = VisualDesignerAgent()
         self.video_agent = VideoProducerAgent()
         self.publisher = PublisherAgent()
+        self.browser_pub = BrowserPublisherAgent()
         self.image_pipeline = ImagePipeline()
         self.video_pipeline = VideoPipeline()
         self.graph = self._build_graph()
+
+    def _node_trend(self, state: WorkflowState) -> WorkflowState:
+        platform = state.get("metadata", {}).get("target_platform", "all")
+        trend = self.trend.analyze(theme=state.get("theme") or None, platform=platform)
+        state["trend_data"] = trend
+        # El trend puede sugerir un tema mejor — solo si no hay override
+        if not state.get("theme"):
+            state["theme"] = trend["theme"]
+        logger.info("[trend] tema=%s ángulo=%s formato=%s",
+                    trend["theme"], trend["trending_angle"], trend["save_format"])
+        return state
 
     def _node_director(self, state: WorkflowState) -> WorkflowState:
         plan = self.director.plan(state.get("theme"))
@@ -45,7 +60,11 @@ class MotivacionWorkflow:
         return state
 
     def _node_content(self, state: WorkflowState) -> WorkflowState:
-        result = self.content.generate(state["theme"], state.get("content_id"))
+        result = self.content.generate(
+            state["theme"],
+            state.get("content_id"),
+            trend_data=state.get("trend_data"),
+        )
         state["content_id"] = result["content_id"]
         state["message"] = result["message"]
         state["message_alt"] = result.get("message_alt", "")
@@ -135,8 +154,31 @@ class MotivacionWorkflow:
         state["status"] = "ready"
         return state
 
+    def _node_browser_publish(self, state: WorkflowState) -> WorkflowState:
+        package_path = state.get("package_path", "")
+        if not package_path:
+            state.setdefault("errors", []).append("browser_publish: package_path vacío")
+            return state
+
+        platforms = self.settings.browser_platform_list
+        result = self.browser_pub.publish(package_path, platforms=platforms)
+        state["publish_results"] = result.get("results", {})
+        state["published_platforms"] = result.get("published", [])
+        state["status"] = "published" if result.get("success") else "publish_failed"
+        logger.info(
+            "Browser publish completado — plataformas: %s",
+            ", ".join(state["published_platforms"]) or "ninguna",
+        )
+        return state
+
+    def _should_browser_publish(self, state: WorkflowState) -> str:
+        if self.settings.auto_publish_browser and state.get("package_path"):
+            return "browser_publish"
+        return END
+
     def _build_graph(self):
         graph = StateGraph(WorkflowState)
+        graph.add_node("trend", self._node_trend)
         graph.add_node("director", self._node_director)
         graph.add_node("content", self._node_content)
         graph.add_node("visual", self._node_visual)
@@ -144,15 +186,18 @@ class MotivacionWorkflow:
         graph.add_node("video_script", self._node_video_script)
         graph.add_node("video", self._node_video)
         graph.add_node("package", self._node_package)
+        graph.add_node("browser_publish", self._node_browser_publish)
 
-        graph.set_entry_point("director")
+        graph.set_entry_point("trend")
+        graph.add_edge("trend", "director")
         graph.add_edge("director", "content")
         graph.add_edge("content", "visual")
         graph.add_edge("visual", "images")
         graph.add_edge("images", "video_script")
         graph.add_edge("video_script", "video")
         graph.add_edge("video", "package")
-        graph.add_edge("package", END)
+        graph.add_conditional_edges("package", self._should_browser_publish)
+        graph.add_edge("browser_publish", END)
         return graph.compile()
 
     def run(self, theme: str | None = None) -> dict[str, Any]:

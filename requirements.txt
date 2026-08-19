@@ -40,5 +40,11 @@ python-multipart>=0.0.12
 # TTS (optional ElevenLabs)
 elevenlabs>=1.0.0
 
+# Browser publisher (publicación como humano, sin APIs)
+playwright>=1.40.0
+
+# Trend agent — Google Trends sin API key
+pytrends>=4.9.2
+
 # Tests
 pytest>=8.0.0

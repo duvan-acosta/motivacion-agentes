@@ -26,5 +26,8 @@ class WorkflowState(TypedDict, total=False):
     video_path: str
     package_path: str
     metadata: dict[str, Any]
+    trend_data: dict[str, Any]
     errors: list[str]
     status: str
+    publish_results: dict[str, Any]
+    published_platforms: list[str]

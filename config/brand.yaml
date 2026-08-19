@@ -9,10 +9,10 @@ brand:
   # estos para construir URLs canónicas y para CTAs de cuenta cruzada.
   handles:
     instagram: "@mentalequilibrio18"
-    tiktok: "@mentalequilibrio91"
-    youtube: "EquilibrioMental91"        # nombre del canal (no es @)
-    twitter: "@MentalEquilibri"          # 15 chars máx por límite de X
-    facebook: "mentalequilibrio18"       # página de Facebook
+    tiktok: "@mentalequilibrio8"
+    youtube: "EquilibrioMental91"
+    twitter: "@MentalEqui"
+    facebook: "mentalequilibrio18"
   language: es
   tone:
     - directo
@@ -25,23 +25,44 @@ brand:
     - sermón académico / filosofía críptica
 
 content:
-  posts_per_day: 1
-  reels_per_day: 1
-  # Temas ampliados: psicología práctica, no solo "estoicismo". El sistema
-  # rota equitativamente entre estos al lanzar batches grandes.
+  posts_per_day: 6       # 3 TikTok + 2 Instagram + 1 Facebook
+  reels_per_day: 2
+  # Temas ordenados por potencial viral — los primeros tienen mayor save rate
   themes_rotation:
-    - esperanza
-    - amor_propio
-    - empezar_de_nuevo
-    - ansiedad_cotidiana
-    - autoestima
-    - calma
-    - resiliencia
-    - propósito
-    - gratitud
-    - coraje
-    - soledad_saludable
-    - limites
+    - ansiedad_cotidiana   # #1 save rate en LATAM (tema universal)
+    - amor_propio          # #2 share rate — mandan a amigos
+    - empezar_de_nuevo     # #3 save rate — momentos de crisis
+    - resiliencia          # alto engagement lunes y miércoles
+    - calma                # viernes y fines de semana
+    - esperanza            # domingos y lunes (inicio de semana)
+    - autoestima           # miércoles — midweek dip
+    - propósito            # jueves y domingos
+    - coraje               # lunes y jueves
+    - gratitud             # viernes — balance semanal
+    - soledad_saludable    # sábados — mayor introspección
+    - limites              # martes y jueves
+
+monetization:
+  # Umbrales de monetización por plataforma
+  thresholds:
+    tiktok_creator_fund: 10000      # seguidores
+    tiktok_live_gifts: 1000         # seguidores
+    instagram_reels_bonus: 1000     # seguidores (con invite)
+    facebook_instream_ads: 10000    # seguidores + 600k min vistos/60 días
+
+  # CTAs de crecimiento (rotación para no saturar)
+  growth_ctas:
+    save: "Guarda esto para cuando lo necesites."
+    comment: "¿Qué te cuesta más soltar? Cuéntame abajo."
+    share: "Mándaselo a alguien que necesite leer esto hoy."
+    follow: "Sígueme para más contenido como este."
+
+  # Afiliados futuros (cuando lleguemos a umbral)
+  affiliate_niches:
+    - libros de psicología popular (LATAM Amazon)
+    - apps de meditación y bienestar
+    - cursos online de desarrollo personal
+    - productos de bienestar físico-mental
 
 # Hashtags base alineados con motivación masiva latina (no "filosofía").
 hashtags_base:

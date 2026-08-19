@@ -17,6 +17,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
+# Instalar Chromium para Playwright (browser publisher sin APIs)
+RUN playwright install-deps chromium && playwright install chromium
+
 COPY . .
 
 RUN mkdir -p data/chroma publication_queue tmp/images tmp/video

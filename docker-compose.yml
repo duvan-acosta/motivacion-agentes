@@ -10,10 +10,13 @@ services:
     volumes:
       - ./publication_queue:/app/publication_queue
       - ./data/chroma:/app/data/chroma
+      - ./data/sessions:/app/data/sessions
+      - ./data/screenshots:/app/data/screenshots
       - ./tmp:/app/tmp
       - ./wallpapers:/app/wallpapers
       - ./.env:/app/.env:ro
     working_dir: /app
+    shm_size: "256mb"
 
   # Ejemplo: generación demo sin APIs
   generate-demo:
@@ -55,7 +58,7 @@ services:
     # Sin restart policy: deja que preview_start gestione el lifecycle. Para prod,
     # usar `docker compose run` o un compose.prod.yml que sí incluya restart.
 
-  # Scheduler en background (generación diaria)
+  # Scheduler en background (generación + publicación diaria)
   scheduler:
     build: .
     env_file:
@@ -65,8 +68,12 @@ services:
     volumes:
       - ./publication_queue:/app/publication_queue
       - ./data/chroma:/app/data/chroma
+      - ./data/sessions:/app/data/sessions
+      - ./data/screenshots:/app/data/screenshots
       - ./tmp:/app/tmp
       - ./wallpapers:/app/wallpapers
       - ./.env:/app/.env:ro
     command: ["schedule"]
     restart: unless-stopped
+    # Necesario para Playwright/Chromium dentro del contenedor
+    shm_size: "256mb"
