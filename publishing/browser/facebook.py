@@ -39,9 +39,13 @@ class FacebookBrowserPublisher(BaseBrowserPublisher):
                 return False
 
     def _login(self, page: Any, context: Any = None) -> bool:
-        logger.info("[facebook] Iniciando sesión como %s", self.email or self._google_email())
-        page.goto(FB_URL, wait_until="networkidle")
-        self.human.think(2.0, 4.0)
+        if not self.email or not self.password:
+            logger.error("[facebook] Configura FB_EMAIL y FB_PASSWORD en .env")
+            return False
+
+        logger.info("[facebook] Iniciando sesión como %s", self.email)
+        self.human.navigate(page, FB_URL, wait="networkidle")
+        self.human.think(2.5, 4.5)
 
         # Aceptar cookies si aparece
         for sel in ["button[data-cookiebanner='accept_button']",
@@ -49,48 +53,24 @@ class FacebookBrowserPublisher(BaseBrowserPublisher):
             try:
                 btn = page.wait_for_selector(sel, timeout=3000)
                 if btn:
+                    self.human.before_click(page)
                     btn.click()
                     self.human.pause()
             except PWTimeout:
                 pass
 
-        # ── Intento 1: Google OAuth ────────────────────────────────────────────
-        if context:
-            google_btns = [
-                "div[aria-label*='Google']",
-                "button:has-text('Continuar con Google')",
-                "button:has-text('Continue with Google')",
-                "[data-testid*='google']",
-            ]
-            try:
-                ok = self._oauth_sign_in_with_google(page, context, google_btns)
-                if ok:
-                    self.human.think(3.0, 6.0)
-                    if "login" not in page.url:
-                        logger.info("[facebook] Login via Google OAuth exitoso")
-                        return True
-            except Exception as exc:
-                logger.warning("[facebook] Google OAuth fallo, intentando email/pass: %s", exc)
-
-        # ── Intento 2: email + password ────────────────────────────────────────
-        if not self.email or not self.password:
-            logger.error("[facebook] Sin credenciales — configura GOOGLE_EMAIL o FB_EMAIL/FB_PASSWORD")
-            return False
-
-        # Si navegamos fuera de FB, volver
-        if FB_URL not in page.url:
-            page.goto(FB_URL, wait_until="networkidle")
-            self.human.think(2.0, 3.5)
-
         try:
             page.wait_for_selector("input[name='email']", timeout=10000)
+            self.human.hesitate()
             page.locator("input[name='email']").fill(self.email)
-            self.human.pause(0.5, 1.2)
-            page.locator("input[name='pass'], input[type='password']").first.fill(self.password)
             self.human.pause(0.8, 1.8)
+
+            page.locator("input[name='pass'], input[type='password']").first.fill(self.password)
+            self.human.pause(1.0, 2.0)
             self._screenshot(page, "login_filled")
 
             try:
+                self.human.before_click(page)
                 page.locator("input[type='submit'], button[type='submit']").first.click()
             except Exception:
                 page.keyboard.press("Enter")
@@ -98,10 +78,10 @@ class FacebookBrowserPublisher(BaseBrowserPublisher):
             self._screenshot(page, "login_after_submit")
 
             if "login" not in page.url:
-                logger.info("[facebook] Login email/pass exitoso")
+                logger.info("[facebook] Login exitoso")
                 return True
 
-            logger.warning("[facebook] Login fallido")
+            logger.warning("[facebook] Login fallido — URL: %s", page.url)
             return False
 
         except Exception as exc:
@@ -257,8 +237,8 @@ class FacebookBrowserPublisher(BaseBrowserPublisher):
                 self.human.think(2.0, 3.5)
 
                 if not self._is_logged_in(page):
-                    if not self._login(page, context):
-                        results["error"] = "Login fallido — configura GOOGLE_EMAIL o FB_EMAIL/FB_PASSWORD"
+                    if not self._login(page):
+                        results["error"] = "Login fallido — configura FB_EMAIL y FB_PASSWORD"
                         return results
                     self._save_cookies(context)
 

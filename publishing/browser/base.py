@@ -18,49 +18,90 @@ logger = logging.getLogger(__name__)
 
 
 class HumanBehavior:
-    """Delays y acciones que imitan a un usuario real."""
+    """Delays y acciones que imitan a un usuario real — navegación lenta anti-bot."""
 
     @staticmethod
-    def pause(min_s: float = 0.6, max_s: float = 2.2) -> None:
+    def pause(min_s: float = 0.8, max_s: float = 2.5) -> None:
         time.sleep(random.uniform(min_s, max_s))
 
     @staticmethod
-    def think(min_s: float = 1.5, max_s: float = 4.0) -> None:
+    def think(min_s: float = 2.0, max_s: float = 5.0) -> None:
         """Pausa larga — como cuando un humano lee algo antes de actuar."""
         time.sleep(random.uniform(min_s, max_s))
 
     @staticmethod
+    def read_page(min_s: float = 3.0, max_s: float = 7.0) -> None:
+        """Simula que el usuario está leyendo el contenido de la página."""
+        time.sleep(random.uniform(min_s, max_s))
+
+    @staticmethod
+    def hesitate() -> None:
+        """Micro-pausa de duda antes de hacer algo — muy humano."""
+        time.sleep(random.uniform(0.3, 0.9))
+
+    @staticmethod
     def type_text(page: Page, selector: str, text: str) -> None:
-        """Escribe texto carácter por carácter con velocidad variable."""
         page.click(selector)
-        time.sleep(random.uniform(0.3, 0.7))
+        time.sleep(random.uniform(0.4, 0.9))
         for char in text:
             page.keyboard.type(char)
-            time.sleep(random.uniform(0.03, 0.15))
+            # Velocidad variable: más lento en puntuación, errores ocasionales
+            delay = random.uniform(0.06, 0.22)
+            if char in ".,!?@":
+                delay += random.uniform(0.05, 0.15)
+            time.sleep(delay)
 
     @staticmethod
     def type_into_element(element: Any, text: str) -> None:
-        """Escribe en un element handle con delays humanos."""
         element.click()
-        time.sleep(random.uniform(0.3, 0.6))
+        time.sleep(random.uniform(0.4, 0.8))
         for char in text:
             element.type(char)
-            time.sleep(random.uniform(0.03, 0.12))
+            time.sleep(random.uniform(0.05, 0.18))
 
     @staticmethod
-    def scroll(page: Page, min_px: int = 80, max_px: int = 350) -> None:
-        """Scroll aleatorio hacia abajo como si estuviera leyendo."""
+    def scroll(page: Page, min_px: int = 100, max_px: int = 400) -> None:
+        """Scroll suave en dos pasos — más natural que uno brusco."""
         delta = random.randint(min_px, max_px)
-        page.mouse.wheel(0, delta)
-        time.sleep(random.uniform(0.2, 0.6))
+        half = delta // 2
+        page.mouse.wheel(0, half)
+        time.sleep(random.uniform(0.15, 0.4))
+        page.mouse.wheel(0, delta - half)
+        time.sleep(random.uniform(0.3, 0.8))
 
     @staticmethod
-    def move_mouse_randomly(page: Page, width: int = 390, height: int = 844) -> None:
-        """Mueve el mouse a una posición aleatoria de la pantalla."""
-        x = random.randint(50, width - 50)
-        y = random.randint(100, height - 100)
-        page.mouse.move(x, y)
-        time.sleep(random.uniform(0.1, 0.3))
+    def move_mouse_randomly(page: Page, width: int = 1920, height: int = 1080) -> None:
+        """Mueve el mouse siguiendo una trayectoria en dos puntos intermedios."""
+        for _ in range(random.randint(1, 3)):
+            x = random.randint(80, width - 80)
+            y = random.randint(120, height - 120)
+            page.mouse.move(x, y)
+            time.sleep(random.uniform(0.08, 0.25))
+
+    @staticmethod
+    def navigate(page: Page, url: str, wait: str = "domcontentloaded") -> None:
+        """Navega a una URL y hace una pausa de lectura realista."""
+        page.goto(url, wait_until=wait)
+        # Pausa inicial de orientación
+        time.sleep(random.uniform(1.5, 3.5))
+        # Scroll pequeño para simular que comienza a leer
+        if random.random() > 0.4:
+            page.mouse.wheel(0, random.randint(50, 200))
+            time.sleep(random.uniform(0.5, 1.2))
+
+    @staticmethod
+    def before_click(page: Page, x: int = 0, y: int = 0) -> None:
+        """Mueve el mouse hacia el elemento antes de hacer clic — más natural."""
+        if x and y:
+            # Movimiento en dos pasos hacia el objetivo
+            mid_x = x + random.randint(-40, 40)
+            mid_y = y + random.randint(-30, 30)
+            page.mouse.move(mid_x, mid_y)
+            time.sleep(random.uniform(0.12, 0.3))
+            page.mouse.move(x, y)
+            time.sleep(random.uniform(0.08, 0.2))
+        else:
+            time.sleep(random.uniform(0.2, 0.5))
 
 
 class BaseBrowserPublisher(GoogleAuthHelper):
@@ -128,13 +169,24 @@ class BaseBrowserPublisher(GoogleAuthHelper):
             locale="es-CO",
             timezone_id="America/Bogota",
             extra_http_headers={"Accept-Language": "es-CO,es;q=0.9,en;q=0.8"},
+            # Velocidad de red reducida simula conexión celular colombiana
+            # (evita cargas instantáneas que delatan bots)
         )
-        # Ocultar señales de automatización
+        # Ocultar señales de automatización + simular hardware real
         context.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
             Object.defineProperty(navigator, 'plugins', { get: () => [1,2,3,4,5] });
             Object.defineProperty(navigator, 'languages', { get: () => ['es-CO','es','en'] });
-            window.chrome = { runtime: {} };
+            Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 4 });
+            Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+            Object.defineProperty(screen, 'colorDepth', { get: () => 24 });
+            window.chrome = { runtime: {}, loadTimes: () => ({}), csi: () => ({}) };
+            // Ocultar Playwright en propiedades de performance
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (params) =>
+                params.name === 'notifications'
+                    ? Promise.resolve({ state: Notification.permission })
+                    : originalQuery(params);
         """)
         self._load_cookies(context)
         return browser, context
