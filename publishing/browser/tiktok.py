@@ -37,36 +37,87 @@ class TikTokBrowserPublisher(BaseBrowserPublisher):
             return False
 
     def _login(self, page: Any, context: Any = None) -> bool:
-        logger.info("[tiktok] Iniciando sesion como %s", self.username or self._google_email())
+        logger.info("[tiktok] Iniciando sesion como %s", self._google_email() or self.username)
 
-        # ── Intento 1: Google OAuth ────────────────────────────────────────────
+        # ── Intento 1: Clic DIRECTO en 'Continuar con Google' en TikTok ──────
+        # NO pre-navegar a Google — TikTok abre el popup OAuth desde su propio login
         if context:
             page.goto(f"{TT_URL}/login", wait_until="domcontentloaded")
-            self.human.think(2.0, 3.5)
+            self.human.think(2.5, 4.0)
             self._screenshot(page, "login_loaded")
-            google_btns = [
-                "[data-e2e='google-login-button']",
-                "div[aria-label*='Google']",
-                "button:has-text('Google')",
-                "a:has-text('Google')",
-                "span:has-text('Continuar con Google')",
-                "span:has-text('Continue with Google')",
-            ]
-            try:
-                ok = self._oauth_sign_in_with_google(page, context, google_btns)
-                if ok:
-                    self.human.think(3.0, 6.0)
-                    if "/login" not in page.url:
-                        logger.info("[tiktok] Login via Google OAuth exitoso")
-                        return True
-            except Exception as exc:
-                logger.warning("[tiktok] Google OAuth fallo, intentando email/pass: %s", exc)
 
-        # ── Intento 2: email + password ────────────────────────────────────────
+            def _click_google_btn_tiktok(btn_el: Any) -> bool:
+                """Clic en el botón Google de TikTok, maneja popup y retorna True si login OK."""
+                logger.info("[tiktok] Boton Google encontrado — clic directo")
+                self.human.before_click(page)
+                try:
+                    with context.expect_page(timeout=6000) as popup_info:
+                        btn_el.click()
+                    popup = popup_info.value
+                    popup.wait_for_load_state("domcontentloaded")
+                    self.human.think(2.0, 3.5)
+                    logger.info("[tiktok] Popup Google: %s", popup.url)
+                    ok = self._handle_google_popup(popup)
+                    if ok:
+                        try:
+                            popup.wait_for_event("close", timeout=20000)
+                        except Exception:
+                            pass
+                        self.human.think(3.0, 6.0)
+                        self._screenshot(page, "login_after_google")
+                        return "/login" not in page.url
+                except PWTimeout:
+                    logger.info("[tiktok] Google OAuth redirect inline")
+                    self.human.think(4.0, 7.0)
+                    self._screenshot(page, "login_after_google")
+                    return "/login" not in page.url
+                except Exception as exc:
+                    logger.warning("[tiktok] Google popup fallo: %s", exc)
+                return False
+
+            # Enfoque A: Playwright get_by_text (más robusto — funciona en div/span/button)
+            google_btn_attempted = False
+            for gtext in ["Continuar con Google", "Continue with Google"]:
+                try:
+                    loc = page.get_by_text(gtext, exact=True).first
+                    loc.wait_for(state="visible", timeout=5000)
+                    google_btn_attempted = True
+                    if _click_google_btn_tiktok(loc):
+                        return True  # login Google exitoso
+                    break  # botón encontrado pero login falló — no reintentar
+                except Exception:
+                    continue
+
+            if not google_btn_attempted:
+                # Enfoque B: wait_for_selector CSS (fallback)
+                css_sels = [
+                    "[data-e2e='google-login-button']",
+                    "span:has-text('Continuar con Google')",
+                    "div:has-text('Continuar con Google')",
+                    "div[aria-label*='Google']",
+                ]
+                for sel in css_sels:
+                    try:
+                        el = page.wait_for_selector(sel, timeout=5000, state="visible")
+                        if el:
+                            google_btn_attempted = True
+                            if _click_google_btn_tiktok(el):
+                                return True
+                            break
+                    except Exception:
+                        continue
+
+            if not google_btn_attempted:
+                logger.warning("[tiktok] Boton 'Continuar con Google' no encontrado")
+
+            # Google OAuth no disponible o falló — probar email/password
+
+        # ── Intento 2: email + password (fallback) ─────────────────────────────
         if not self.username or not self.password:
-            logger.error("[tiktok] Sin credenciales — configura GOOGLE_EMAIL o TIKTOK_USERNAME/TIKTOK_PASSWORD")
+            logger.error("[tiktok] Sin credenciales — configura TIKTOK_USERNAME/TIKTOK_PASSWORD")
             return False
 
+        logger.info("[tiktok] Fallback a email/password")
         page.goto(f"{TT_URL}/login/phone-or-email/email", wait_until="domcontentloaded")
         self.human.think(2.0, 4.0)
 
@@ -232,8 +283,8 @@ class TikTokBrowserPublisher(BaseBrowserPublisher):
         results: dict[str, Any] = {"platform": "tiktok", "success": False}
 
         with sync_playwright() as pw:
-            # TikTok upload funciona mejor con desktop
-            browser, context = self._build_context(pw, headless=True, mobile=False)
+            # headless=False requerido para Google OAuth — headless Chromium es bloqueado por Google
+            browser, context = self._build_context(pw, headless=False, mobile=False)
             page = context.new_page()
 
             try:

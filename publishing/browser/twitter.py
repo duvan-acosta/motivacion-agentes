@@ -42,21 +42,76 @@ class TwitterBrowserPublisher(BaseBrowserPublisher):
         except PWTimeout:
             return False
 
-    def _login(self, page: Any) -> bool:
-        if not self.username or not self.password:
-            logger.error("[twitter] Configura X_USERNAME y X_PASSWORD en .env")
-            return False
-
-        logger.info("[twitter] Iniciando sesión como %s", self.username)
+    def _login(self, page: Any, context: Any = None) -> bool:
+        logger.info("[twitter] Iniciando sesion como %s", self._google_email() or self.username)
         self.human.navigate(page, X_URL)
         self.human.think(2.0, 3.5)
         self.human.navigate(page, X_LOGIN_URL)
         self.human.think(3.0, 5.5)
         self._screenshot(page, "login_loaded")
 
+        # ── Intento 1: Google OAuth directo ─────────────────────────────────
+        if context:
+            google_sels = [
+                "[data-testid='google_sign_in_container']",
+                "a[href*='google']:has-text('Google')",
+                "span:has-text('Continuar con Google')",
+                "span:has-text('Continue with Google')",
+                "span:has-text('Sign in with Google')",
+                "span:has-text('Iniciar sesión con Google')",
+                "div[aria-label*='Google']",
+            ]
+            for sel in google_sels:
+                try:
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=3000):
+                        logger.info("[twitter] Boton Google encontrado: %s", sel)
+                        self.human.before_click(page)
+                        try:
+                            with context.expect_page(timeout=6000) as popup_info:
+                                el.click()
+                            popup = popup_info.value
+                            popup.wait_for_load_state("domcontentloaded")
+                            self.human.think(2.0, 3.5)
+                            logger.info("[twitter] Popup Google: %s", popup.url)
+
+                            ok = self._handle_google_popup(popup)
+                            if ok:
+                                try:
+                                    popup.wait_for_event("close", timeout=20000)
+                                except Exception:
+                                    pass
+                                self.human.think(3.0, 6.0)
+                                self._screenshot(page, "login_after_google")
+                                if self._is_logged_in(page):
+                                    logger.info("[twitter] Login Google OAuth exitoso")
+                                    return True
+                        except PWTimeout:
+                            logger.info("[twitter] Google OAuth redirect inline")
+                            self.human.think(4.0, 7.0)
+                            if self._is_logged_in(page):
+                                return True
+                        except Exception as exc:
+                            logger.warning("[twitter] Google popup fallo: %s", exc)
+                        break
+                except Exception:
+                    continue
+
+        # ── Intento 2: email + password ──────────────────────────────────────
+        if not self.username or not self.password:
+            logger.error("[twitter] Configura X_USERNAME y X_PASSWORD en .env")
+            return False
+
+        logger.info("[twitter] Intentando login email/password")
+        # Volver al login en caso de que hayamos navegado
         try:
-            # Paso 1: email/usuario
-            # fill() en lugar de click()+type() — evita overlay de PassKey
+            if X_LOGIN_URL not in page.url and "x.com/i/flow/login" not in page.url:
+                self.human.navigate(page, X_LOGIN_URL)
+                self.human.think(2.5, 4.5)
+        except Exception:
+            pass
+
+        try:
             user_sel = (
                 "input[data-testid='ocfEnterTextTextInput'], "
                 "input[name='text'], "
@@ -77,7 +132,7 @@ class TwitterBrowserPublisher(BaseBrowserPublisher):
             try:
                 verify_sel = "input[data-testid='ocfEnterTextTextInput']"
                 page.wait_for_selector(verify_sel, timeout=4000)
-                logger.info("[twitter] Verificación de handle solicitada")
+                logger.info("[twitter] Verificacion de handle solicitada")
                 handle = self.username.split("@")[0]
                 page.locator(verify_sel).first.fill(handle)
                 self.human.pause(0.8, 1.5)
@@ -94,7 +149,6 @@ class TwitterBrowserPublisher(BaseBrowserPublisher):
             self.human.pause(1.0, 2.0)
             self._screenshot(page, "login_password_filled")
 
-            # Botón Log in
             for selector in ["[data-testid='LoginForm_Login_Button']"]:
                 try:
                     btn = page.wait_for_selector(selector, timeout=3000)
@@ -270,7 +324,8 @@ class TwitterBrowserPublisher(BaseBrowserPublisher):
         results: dict[str, Any] = {"platform": "twitter", "success": False}
 
         with sync_playwright() as pw:
-            browser, context = self._build_context(pw, headless=True, mobile=False)
+            # headless=False para Google OAuth — Google bloquea headless Chromium
+            browser, context = self._build_context(pw, headless=False, mobile=False)
             page = context.new_page()
 
             try:
@@ -278,8 +333,8 @@ class TwitterBrowserPublisher(BaseBrowserPublisher):
                 self.human.think(2.0, 4.0)
 
                 if not self._is_logged_in(page):
-                    if not self._login(page):
-                        results["error"] = "Login fallido — configura X_USERNAME y X_PASSWORD"
+                    if not self._login(page, context):
+                        results["error"] = "Login fallido — configura X_USERNAME/X_PASSWORD o GOOGLE_EMAIL/GOOGLE_PASSWORD"
                         return results
                     self._save_cookies(context)
 

@@ -61,41 +61,23 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
                 pass
 
     def _login(self, page: Any, context: Any = None) -> bool:
+        """
+        Login Instagram web con email + password.
+        NOTA: Instagram web NO tiene 'Sign in with Google'. Si la cuenta fue
+        creada vía Google OAuth en mobile, el usuario debe resetear la contraseña
+        en instagram.com/accounts/password/reset/ para obtener una clave web.
+        """
+        if not self.username or not self.password:
+            logger.error("[instagram] Configura IG_USERNAME e IG_PASSWORD en .env")
+            return False
+
         logger.info("[instagram] Iniciando sesion en %s", IG_LOGIN_URL)
         page.goto(IG_LOGIN_URL, wait_until="domcontentloaded")
         self.human.think(2.0, 3.5)
         self._screenshot(page, "login_loaded")
         self._dismiss_modals(page)
 
-        # ── Intento 1: Google OAuth (cuenta creada con Google) ────────────────
-        if context:
-            google_btns = [
-                "button:has-text('Iniciar sesión con Google')",
-                "button:has-text('Log in with Google')",
-                "a:has-text('Iniciar sesión con Google')",
-                "[aria-label*='Google']",
-            ]
-            try:
-                ok = self._oauth_sign_in_with_google(page, context, google_btns)
-                if ok:
-                    self.human.think(3.0, 5.0)
-                    self._dismiss_modals(page)
-                    if self._is_logged_in(page):
-                        logger.info("[instagram] Login via Google OAuth exitoso")
-                        return True
-            except Exception as exc:
-                logger.warning("[instagram] Google OAuth fallo, intentando con email/pass: %s", exc)
-
-        # ── Intento 2: email + password directo ───────────────────────────────
-        if not self.username or not self.password:
-            logger.error("[instagram] Sin credenciales — configura GOOGLE_EMAIL o IG_USERNAME/IG_PASSWORD")
-            return False
-
-        # Puede que Google OAuth haya navegado — volver al login
-        if IG_LOGIN_URL not in page.url:
-            page.goto(IG_LOGIN_URL, wait_until="domcontentloaded")
-            self.human.think(2.0, 3.5)
-
+        # IG puede mostrar pantalla "Abrir app" en desktop — buscar link de login
         for sel in ["a:has-text('Iniciar sesión')", "a:has-text('Log in')", "a[href='/accounts/login/']"]:
             try:
                 link = page.locator(sel).first
@@ -113,10 +95,11 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
 
         try:
             page.wait_for_selector(USER_SEL, timeout=12000)
+            self.human.hesitate()
             page.locator(USER_SEL).first.fill(self.username)
-            self.human.pause(0.6, 1.2)
-            page.locator(PASS_SEL).first.fill(self.password)
             self.human.pause(0.8, 1.5)
+            page.locator(PASS_SEL).first.fill(self.password)
+            self.human.pause(1.0, 2.0)
             self._screenshot(page, "login_filled")
 
             try:
@@ -128,11 +111,11 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
             self._screenshot(page, "login_after_submit")
 
             if self._is_logged_in(page) or "/accounts/login" not in page.url:
-                logger.info("[instagram] Login email/pass exitoso")
+                logger.info("[instagram] Login exitoso")
                 return True
 
             self._screenshot(page, "login_failed")
-            logger.warning("[instagram] Login fallo — URL: %s", page.url)
+            logger.warning("[instagram] Login fallo — el usuario debe resetear contrasena en instagram.com/accounts/password/reset/")
             return False
 
         except Exception as exc:
@@ -380,8 +363,8 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
                 self.human.think(2.5, 4.0)
 
                 if not self._is_logged_in(page):
-                    if not self._login(page, context):
-                        results["error"] = "Login fallido — configura GOOGLE_EMAIL o IG_USERNAME/IG_PASSWORD"
+                    if not self._login(page):
+                        results["error"] = "Login fallido — resetea la contrasena en instagram.com/accounts/password/reset/"
                         return results
                     self._save_cookies(context)
                     # Navegar al home después del login

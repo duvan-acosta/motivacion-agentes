@@ -302,7 +302,8 @@ class YouTubeBrowserPublisher(BaseBrowserPublisher):
         results: dict[str, Any] = {"platform": "youtube", "success": False}
 
         with sync_playwright() as pw:
-            browser, context = self._build_context(pw, headless=True, mobile=False)
+            # headless=False para login Google — Google bloquea CDP headless en OAuth
+            browser, context = self._build_context(pw, headless=False, mobile=False)
             page = context.new_page()
 
             try:

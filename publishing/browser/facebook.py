@@ -88,6 +88,73 @@ class FacebookBrowserPublisher(BaseBrowserPublisher):
             logger.error("[facebook] Error en login: %s", exc)
             return False
 
+    def _dismiss_fb_modals(self, page: Any, max_attempts: int = 5) -> None:
+        """
+        Cierra cualquier modal/popup de FB — no depende de div[role='dialog']
+        porque 'Revisar destinatarios' puede usar roles distintos.
+        Busca directamente el botón 'Continuar' en todo el DOM via JS.
+        """
+        import time as _t
+        # Botones que indican un modal bloqueante — en orden de prioridad
+        # "Guardar" = segundo modal "Actualizar configuración" (audiencia de Reels)
+        # "Continuar" = primer modal "Revisar destinatarios"
+        MODAL_BTNS = ["Guardar", "Save", "Continuar", "Continue", "OK", "Aceptar", "Ahora no", "Not Now"]
+        for attempt in range(max_attempts):
+            self._screenshot(page, f"fb_dismiss_before_{attempt}")
+
+            # Usar selector CSS :has-text para detectar por texto visible (evita problemas de role/aria-label)
+            clicked = False
+            for btn_text in MODAL_BTNS:
+                try:
+                    # Selector que busca en TODOS los botones/divs clickeables con ese texto
+                    sel = f'button:has-text("{btn_text}"), [role="button"]:has-text("{btn_text}")'
+                    loc = page.locator(sel).first
+                    loc.wait_for(state="visible", timeout=1500)
+                    self.human.before_click(page)
+                    loc.click(force=True)
+                    logger.info("[facebook] Modal '%s' cerrado via locator (intento %d)", btn_text, attempt + 1)
+                    _t.sleep(2.0)
+                    self._screenshot(page, f"fb_after_dismiss_{attempt}")
+                    clicked = True
+                    break
+                except Exception:
+                    pass
+
+            if not clicked:
+                # Fallback JS — busca en TODO el DOM, incluyendo popups que no son role=button
+                clicked_js = page.evaluate("""
+                    () => {
+                        const targets = ['Guardar', 'Save', 'Continuar', 'Continue', 'OK', 'Aceptar', 'Ahora no', 'Not Now'];
+                        // Buscar solo en modales/overlays para evitar falsos positivos en el feed
+                        const modalRoots = document.querySelectorAll('[role="dialog"], [role="alertdialog"], [data-testid*="modal"]');
+                        let els = [];
+                        if (modalRoots.length > 0) {
+                            modalRoots.forEach(r => els.push(...r.querySelectorAll('[role="button"], button')));
+                        } else {
+                            // Sin modal marcado explícitamente — buscar en overlay fijo
+                            const fixed = [...document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]')];
+                            fixed.forEach(r => els.push(...r.querySelectorAll('[role="button"], button')));
+                        }
+                        for (const el of els) {
+                            const txt = (el.innerText || el.textContent || '').trim();
+                            if (targets.includes(txt)) {
+                                el.click();
+                                return txt;
+                            }
+                        }
+                        return null;
+                    }
+                """)
+                if clicked_js:
+                    logger.info("[facebook] Modal '%s' cerrado via JS (intento %d)", clicked_js, attempt + 1)
+                    _t.sleep(2.0)
+                    self._screenshot(page, f"fb_after_dismiss_{attempt}")
+                    clicked = True
+
+            if not clicked:
+                logger.info("[facebook] Sin modal bloqueante (intento %d)", attempt + 1)
+                break
+
     # ── Publicar en página ─────────────────────────────────────────────────────
 
     def _publish_post(self, page: Any, image_path: Path, caption: str) -> bool:
@@ -106,72 +173,75 @@ class FacebookBrowserPublisher(BaseBrowserPublisher):
             self.human.think(2.0, 3.5)
 
         try:
-            # Cerrar cualquier modal/diálogo que bloquee
-            for esc_text in ["Ahora no", "Not Now", "Cerrar", "Close"]:
-                try:
-                    btn = page.get_by_role("button", name=esc_text)
-                    if btn.is_visible(timeout=1500):
-                        btn.click()
-                        self.human.pause(0.5, 1.0)
-                except Exception:
-                    pass
-            page.keyboard.press("Escape")
-            self.human.pause(0.5, 1.0)
+            import time as _time
 
-            # Clic en la caja "¿Qué estás pensando, [Nombre]?"
-            clicked_create = False
-            for sel in [
+            CREATE_SELS = [
                 "div[aria-label*='pensando']",
                 "div[aria-label*='mind']",
                 "div[role='button'][aria-label*='post']",
                 "span:has-text('¿Qué estás pensando')",
                 "span:has-text(\"What's on your mind\")",
-            ]:
-                try:
-                    el = page.locator(sel).first
-                    if el.is_visible(timeout=4000):
-                        el.click()
-                        clicked_create = True
-                        self.human.think(1.5, 3.0)
-                        self._screenshot(page, "fb_create_clicked")
-                        break
-                except Exception:
-                    continue
-
-            if not clicked_create:
-                # Fallback: buscar el primer div clickeable del área de crear post
-                try:
-                    post_area = page.locator("[role='main'] [role='button']").first
-                    post_area.click()
-                    self.human.think(1.5, 3.0)
-                except Exception:
-                    pass
-
-            # Escribir texto en el editor del modal
-            written = False
-            for sel in [
+            ]
+            EDITOR_SELS = [
                 "div[contenteditable='true'][aria-label*='post']",
                 "div[contenteditable='true'][role='textbox']",
                 "div[data-lexical-editor='true']",
                 "div[contenteditable='true']",
-            ]:
-                try:
-                    editor = page.locator(sel).first
-                    if editor.is_visible(timeout=5000):
-                        editor.click()
-                        self.human.pause(0.5, 1.0)
-                        import time
-                        for char in caption[:63000]:
-                            page.keyboard.type(char)
-                            time.sleep(0.04)
-                        written = True
-                        self._screenshot(page, "fb_text_written")
-                        break
-                except Exception:
-                    continue
+            ]
+
+            # Descartar cualquier modal previo
+            self._dismiss_fb_modals(page)
+
+            written = False
+            # Intentar hasta 3 veces: click "¿Qué estás pensando?" → descartar modal → buscar editor
+            for round_n in range(3):
+                logger.info("[facebook] Intento %d de abrir compose", round_n + 1)
+
+                # Clic en "¿Qué estás pensando?"
+                for sel in CREATE_SELS:
+                    try:
+                        el = page.locator(sel).first
+                        if el.is_visible(timeout=4000):
+                            self.human.before_click(page)
+                            el.click()
+                            self.human.think(1.5, 2.5)
+                            self._screenshot(page, f"fb_create_clicked_{round_n}")
+                            break
+                    except Exception:
+                        continue
+
+                # Descartar modal "Revisar destinatarios" si aparece
+                self._dismiss_fb_modals(page)
+                self.human.think(1.0, 1.5)
+
+                # Verificar si el editor de texto está disponible
+                editor_found = False
+                for sel in EDITOR_SELS:
+                    try:
+                        editor = page.locator(sel).first
+                        if editor.is_visible(timeout=3000):
+                            self.human.before_click(page)
+                            editor.click()
+                            self.human.pause(0.5, 1.0)
+                            for char in caption[:63000]:
+                                page.keyboard.type(char)
+                                _time.sleep(0.04)
+                            written = True
+                            editor_found = True
+                            self._screenshot(page, "fb_text_written")
+                            logger.info("[facebook] Texto escrito en editor (ronda %d)", round_n + 1)
+                            break
+                    except Exception:
+                        continue
+
+                if editor_found:
+                    break
+
+                logger.info("[facebook] Editor no disponible en ronda %d — reintentando", round_n + 1)
+                self.human.think(2.0, 3.5)
 
             if not written:
-                logger.warning("[facebook] No se pudo escribir el texto")
+                logger.warning("[facebook] No se pudo abrir el editor tras 3 intentos")
                 self._screenshot(page, "fb_no_editor")
                 return False
 

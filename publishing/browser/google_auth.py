@@ -73,8 +73,11 @@ class GoogleAuthHelper:
             self._click_google_next(page)
             self.human.think(2.0, 3.5)  # type: ignore[attr-defined]
 
+            # Google puede mostrar pantalla de Passkey antes del campo de contraseña
+            self._bypass_google_passkey(page)
+
             # Contraseña
-            page.wait_for_selector(_PASS_SEL, timeout=10000)
+            page.wait_for_selector(_PASS_SEL, timeout=12000)
             self.human.pause(0.5, 1.0)  # type: ignore[attr-defined]
             page.locator(_PASS_SEL).first.fill(password)
             self.human.pause(0.8, 1.5)  # type: ignore[attr-defined]
@@ -108,6 +111,69 @@ class GoogleAuthHelper:
         except Exception as exc:
             logger.error("[google_auth] Error en login Google: %s", exc)
             return False
+
+    def _bypass_google_passkey(self, page: Any) -> None:
+        """
+        Google puede mostrar 'Elige cómo iniciar sesión' (Passkey/biometría)
+        después del email. Aquí detectamos la pantalla y navegamos a contraseña.
+        Captura screenshot para debug si detecta pantalla de selección de método.
+        """
+        import time as _t
+        from pathlib import Path as _Path
+
+        # Capturar estado actual para debug
+        try:
+            shots_dir = _Path("data/screenshots")
+            shots_dir.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(shots_dir / f"google_passkey_check_{int(_t.time())}.png"))
+        except Exception:
+            pass
+
+        # Botones/links que aparecen en la pantalla de Passkey/selector de método
+        passkey_indicators = [
+            "Ingresar contraseña",          # ES — opción directa de contraseña
+            "Usar una contraseña",           # ES — variante
+            "Usar otra cuenta",              # ES
+            "Use a password",                # EN
+            "Enter your password",           # EN
+            "Try another way",              # EN — "Intentar de otra forma"
+            "Intentar de otra forma",       # ES
+            "Probar de otra manera",        # ES
+            "More options",                 # EN
+            "Más opciones",                 # ES
+            "Switch account",               # EN
+        ]
+        for text in passkey_indicators:
+            try:
+                el = page.get_by_text(text, exact=False).first
+                if el.is_visible(timeout=1500):
+                    el.click()
+                    self.human.think(1.5, 3.0)  # type: ignore[attr-defined]
+                    logger.info("[google_auth] Passkey screen bypasseada via '%s'", text)
+                    # Después de "Try another way" puede aparecer menú con "Contraseña"
+                    for pwd_text in ["Contraseña", "Password", "Ingresar contraseña"]:
+                        try:
+                            pwd_opt = page.get_by_text(pwd_text, exact=False).first
+                            if pwd_opt.is_visible(timeout=2000):
+                                pwd_opt.click()
+                                self.human.think(1.5, 2.5)  # type: ignore[attr-defined]
+                                logger.info("[google_auth] Opcion Password seleccionada")
+                                return
+                        except Exception:
+                            continue
+                    return
+            except Exception:
+                continue
+
+        # También intentar via link href con "usepw"
+        try:
+            pwd_link = page.locator("a[href*='usepw'], a[href*='password']").first
+            if pwd_link.is_visible(timeout=1500):
+                pwd_link.click()
+                self.human.think(1.5, 2.5)  # type: ignore[attr-defined]
+                logger.info("[google_auth] Passkey bypass via href link")
+        except Exception:
+            pass
 
     def _click_google_next(self, page: Any) -> None:
         for sel in _NEXT_SELS:
@@ -211,40 +277,89 @@ class GoogleAuthHelper:
 
     def _handle_google_popup(self, popup: Any) -> bool:
         """
-        Dentro del popup de Google: selecciona la cuenta o confirma acceso.
-        Si Google ya tiene sesión activa, solo hace clic en la cuenta.
+        Dentro del popup de Google OAuth:
+        - Si ya hay sesión activa: selecciona la cuenta
+        - Si no: hace login completo (email → passkey bypass → password)
+        - Luego confirma permisos si aparecen
         """
+        import time as _t
         try:
-            # Google muestra selector de cuenta (ya autenticado)
+            popup.wait_for_load_state("domcontentloaded")
+            self.human.think(2.0, 3.5)  # type: ignore[attr-defined]
+            logger.info("[google_auth] Popup URL: %s", popup.url)
+
+            # Capturar screenshot con nombre único para debug
+            try:
+                import os as _os
+                from pathlib import Path as _Path
+                shots_dir = _Path("data/screenshots")
+                shots_dir.mkdir(parents=True, exist_ok=True)
+                popup.screenshot(path=str(shots_dir / f"google_popup_state_{int(_t.time())}.png"))
+            except Exception:
+                pass
+
             email = self._google_email()
+
+            # ── Caso 1: Selector de cuenta (sesión Google ya activa) ──────────
             for sel in [
                 f"[data-email='{email}']",
-                f"div:has-text('{email}')",
-                "[data-identifier]",
+                f"[data-identifier='{email}']",
+                "div[data-authuser]",
                 "li[data-authuser]",
-                "div[role='link']",
+                "div[role='link'][data-identifier]",
+                # Fallback: cualquier elemento con el email visible
+                f"div:has-text('{email}')",
             ]:
                 try:
                     el = popup.locator(sel).first
-                    if el.is_visible(timeout=3000):
+                    if el.is_visible(timeout=2500):
                         el.click()
                         self.human.think(2.0, 4.0)  # type: ignore[attr-defined]
-                        logger.info("[google_auth] Cuenta seleccionada en popup")
-                        break
+                        logger.info("[google_auth] Cuenta seleccionada en popup: %s", sel)
+                        # Confirmar permisos si aparecen después de seleccionar cuenta
+                        self._dismiss_google_prompts(popup)
+                        return True
                 except Exception:
                     continue
 
-            # Confirmar permisos si los pide
-            for text in ["Continuar", "Continue", "Permitir", "Allow", "Acceder", "Sign in"]:
+            # ── Caso 2: Pantalla de login completo (sesión NO activa en popup) ──
+            try:
+                popup.wait_for_selector(_EMAIL_SEL, timeout=5000)
+                logger.info("[google_auth] Popup requiere login completo")
+
+                # Email
+                popup.locator(_EMAIL_SEL).first.fill(email)
+                self.human.pause(0.6, 1.2)  # type: ignore[attr-defined]
+                self._click_google_next(popup)
+                self.human.think(2.5, 4.0)  # type: ignore[attr-defined]
+
+                # Capturar qué muestra Google después del email
                 try:
-                    btn = popup.get_by_role("button", name=text)
-                    if btn.is_visible(timeout=3000):
-                        btn.click()
-                        self.human.think(2.0, 3.5)  # type: ignore[attr-defined]
+                    shots_dir = _Path("data/screenshots")
+                    popup.screenshot(path=str(shots_dir / f"google_popup_after_email_{int(_t.time())}.png"))
                 except Exception:
-                    continue
+                    pass
 
-            return True
+                # Bypass Passkey antes del campo de contraseña
+                self._bypass_google_passkey(popup)
+
+                # Contraseña
+                password = self._google_password()
+                popup.wait_for_selector(_PASS_SEL, timeout=15000)
+                popup.locator(_PASS_SEL).first.fill(password)
+                self.human.pause(0.8, 1.5)  # type: ignore[attr-defined]
+                self._click_google_next(popup)
+                self.human.think(4.0, 7.0)  # type: ignore[attr-defined]
+
+                logger.info("[google_auth] Login completo en popup — esperando redirect")
+                self._dismiss_google_prompts(popup)
+                return True
+
+            except PWTimeout:
+                # No encontró email input → asumir que ya está autenticado o hubo redirect
+                logger.info("[google_auth] No email input en popup — posible sesion activa o redirect")
+                self._dismiss_google_prompts(popup)
+                return True
 
         except Exception as exc:
             logger.warning("[google_auth] Error en popup Google: %s", exc)
