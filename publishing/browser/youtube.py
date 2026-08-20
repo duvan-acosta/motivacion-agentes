@@ -310,10 +310,15 @@ class YouTubeBrowserPublisher(BaseBrowserPublisher):
                 self.human.think(2.0, 4.0)
 
                 if not self._is_logged_in(page):
-                    if not self._login_google(page):
-                        results["error"] = "Login Google fallido — configura GOOGLE_EMAIL y GOOGLE_PASSWORD"
-                        return results
+                    # Usar el helper base que carga cookies Google compartidas
+                    if not self._ensure_google_session(page, context):
+                        # Fallback al login directo propio si el helper falla
+                        if not self._login_google(page):
+                            results["error"] = "Login Google fallido — configura GOOGLE_EMAIL y GOOGLE_PASSWORD"
+                            return results
                     self._save_cookies(context)
+                    page.goto(YT_STUDIO, wait_until="domcontentloaded")
+                    self.human.think(2.0, 4.0)
 
                 results["success"] = self._upload_short(page, video_path, title, description, tags)
                 self._save_cookies(context)

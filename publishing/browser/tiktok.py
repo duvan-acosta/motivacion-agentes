@@ -36,28 +36,48 @@ class TikTokBrowserPublisher(BaseBrowserPublisher):
         except PWTimeout:
             return False
 
-    def _login(self, page: Any) -> bool:
+    def _login(self, page: Any, context: Any = None) -> bool:
+        logger.info("[tiktok] Iniciando sesion como %s", self.username or self._google_email())
+
+        # ── Intento 1: Google OAuth ────────────────────────────────────────────
+        if context:
+            page.goto(f"{TT_URL}/login", wait_until="domcontentloaded")
+            self.human.think(2.0, 3.5)
+            self._screenshot(page, "login_loaded")
+            google_btns = [
+                "[data-e2e='google-login-button']",
+                "div[aria-label*='Google']",
+                "button:has-text('Google')",
+                "a:has-text('Google')",
+                "span:has-text('Continuar con Google')",
+                "span:has-text('Continue with Google')",
+            ]
+            try:
+                ok = self._oauth_sign_in_with_google(page, context, google_btns)
+                if ok:
+                    self.human.think(3.0, 6.0)
+                    if "/login" not in page.url:
+                        logger.info("[tiktok] Login via Google OAuth exitoso")
+                        return True
+            except Exception as exc:
+                logger.warning("[tiktok] Google OAuth fallo, intentando email/pass: %s", exc)
+
+        # ── Intento 2: email + password ────────────────────────────────────────
         if not self.username or not self.password:
-            logger.error("[tiktok] Credenciales TIKTOK_USERNAME / TIKTOK_PASSWORD no configuradas")
+            logger.error("[tiktok] Sin credenciales — configura GOOGLE_EMAIL o TIKTOK_USERNAME/TIKTOK_PASSWORD")
             return False
 
-        logger.info("[tiktok] Iniciando sesion como %s", self.username)
         page.goto(f"{TT_URL}/login/phone-or-email/email", wait_until="domcontentloaded")
         self.human.think(2.0, 4.0)
-        self._screenshot(page, "login_loaded")
 
         try:
-            # Email/usuario — usar fill() para evitar problemas con click
             page.wait_for_selector("input[name='username']", timeout=10000)
             page.locator("input[name='username']").fill(self.username)
             self.human.pause(0.6, 1.2)
-
-            # Contraseña
             page.locator("input[type='password']").fill(self.password)
             self.human.pause(0.8, 1.8)
             self._screenshot(page, "login_filled")
 
-            # Submit
             for sel in ["button[data-e2e='login-button']", "button[type='submit']"]:
                 try:
                     btn = page.wait_for_selector(sel, timeout=4000)
@@ -72,12 +92,11 @@ class TikTokBrowserPublisher(BaseBrowserPublisher):
                 self.human.think(5.0, 8.0)
 
             self._screenshot(page, "login_after_submit")
-
             if "/login" not in page.url:
-                logger.info("[tiktok] Login exitoso — URL: %s", page.url)
+                logger.info("[tiktok] Login email/pass exitoso")
                 return True
 
-            logger.warning("[tiktok] Login posiblemente fallido — URL: %s", page.url)
+            logger.warning("[tiktok] Login fallido — URL: %s", page.url)
             return False
 
         except Exception as exc:
@@ -222,8 +241,8 @@ class TikTokBrowserPublisher(BaseBrowserPublisher):
                 self.human.think(2.0, 3.5)
 
                 if not self._is_logged_in(page):
-                    if not self._login(page):
-                        results["error"] = "Login fallido"
+                    if not self._login(page, context):
+                        results["error"] = "Login fallido — configura GOOGLE_EMAIL o TIKTOK_USERNAME/TIKTOK_PASSWORD"
                         return results
                     self._save_cookies(context)
 

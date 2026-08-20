@@ -11,6 +11,7 @@ from typing import Any
 
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
+from publishing.browser.google_auth import GoogleAuthHelper
 from utils.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -62,8 +63,8 @@ class HumanBehavior:
         time.sleep(random.uniform(0.1, 0.3))
 
 
-class BaseBrowserPublisher:
-    """Publicador base con Playwright y persistencia de sesión."""
+class BaseBrowserPublisher(GoogleAuthHelper):
+    """Publicador base con Playwright, persistencia de sesión y OAuth Google."""
 
     PLATFORM: str = "base"
     # User-agent de iPhone 15 — funciona bien con Instagram y TikTok mobile
@@ -87,6 +88,8 @@ class BaseBrowserPublisher:
         self.screenshots_dir = root / "data" / "screenshots"
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         self.session_file = self.sessions_dir / f"{self.PLATFORM}_session.json"
+        # Sesión Google compartida entre todas las plataformas
+        self.google_session_file = self.sessions_dir / "google_session.json"
 
     # ── Context ────────────────────────────────────────────────────────────────
 
@@ -137,22 +140,41 @@ class BaseBrowserPublisher:
         return browser, context
 
     def _load_cookies(self, context: BrowserContext) -> bool:
-        if not self.session_file.exists():
-            return False
-        try:
-            cookies = json.loads(self.session_file.read_text(encoding="utf-8"))
-            context.add_cookies(cookies)
-            logger.info("[%s] Sesión cargada (%d cookies)", self.PLATFORM, len(cookies))
-            return True
-        except Exception as exc:
-            logger.warning("[%s] No se pudieron cargar cookies: %s", self.PLATFORM, exc)
-            return False
+        loaded = 0
+        # Cargar siempre las cookies Google (sesión compartida)
+        if self.google_session_file.exists():
+            try:
+                g_cookies = json.loads(self.google_session_file.read_text(encoding="utf-8"))
+                context.add_cookies(g_cookies)
+                loaded += len(g_cookies)
+            except Exception as exc:
+                logger.warning("[%s] No se pudieron cargar cookies Google: %s", self.PLATFORM, exc)
+        # Cargar cookies específicas de la plataforma
+        if self.session_file.exists():
+            try:
+                cookies = json.loads(self.session_file.read_text(encoding="utf-8"))
+                context.add_cookies(cookies)
+                loaded += len(cookies)
+            except Exception as exc:
+                logger.warning("[%s] No se pudieron cargar cookies: %s", self.PLATFORM, exc)
+        if loaded:
+            logger.info("[%s] Sesión cargada (%d cookies)", self.PLATFORM, loaded)
+        return loaded > 0
 
     def _save_cookies(self, context: BrowserContext) -> None:
         cookies = context.cookies()
-        self.session_file.write_text(
-            json.dumps(cookies, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        # Separar cookies Google de las de plataforma
+        google_domains = {"google.com", "accounts.google.com", "myaccount.google.com", "youtube.com"}
+        g_cookies = [c for c in cookies if any(d in (c.get("domain", "")) for d in google_domains)]
+        p_cookies = [c for c in cookies if not any(d in (c.get("domain", "")) for d in google_domains)]
+        if g_cookies:
+            self.google_session_file.write_text(
+                json.dumps(g_cookies, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        if p_cookies:
+            self.session_file.write_text(
+                json.dumps(p_cookies, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
         logger.info("[%s] Sesión guardada (%d cookies)", self.PLATFORM, len(cookies))
 
     # ── Screenshots ────────────────────────────────────────────────────────────

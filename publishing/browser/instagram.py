@@ -60,69 +60,75 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
             except Exception:
                 pass
 
-    def _login(self, page: Any) -> bool:
-        if not self.username or not self.password:
-            logger.error("[instagram] Credenciales IG_USERNAME / IG_PASSWORD no configuradas")
-            return False
-
+    def _login(self, page: Any, context: Any = None) -> bool:
         logger.info("[instagram] Iniciando sesion en %s", IG_LOGIN_URL)
         page.goto(IG_LOGIN_URL, wait_until="domcontentloaded")
-        self.human.think(2.5, 4.0)
+        self.human.think(2.0, 3.5)
         self._screenshot(page, "login_loaded")
+        self._dismiss_modals(page)
 
-        # Instagram en desktop puede mostrar "Abrir app para tablets".
-        # Hacer click en el link de Iniciar sesión para ir al formulario.
-        for sel in [
-            "a:has-text('Iniciar sesión')",
-            "a:has-text('Log in')",
-            "a[href='/accounts/login/']",
-            "a:has-text('Sign in')",
-        ]:
+        # ── Intento 1: Google OAuth (cuenta creada con Google) ────────────────
+        if context:
+            google_btns = [
+                "button:has-text('Iniciar sesión con Google')",
+                "button:has-text('Log in with Google')",
+                "a:has-text('Iniciar sesión con Google')",
+                "[aria-label*='Google']",
+            ]
+            try:
+                ok = self._oauth_sign_in_with_google(page, context, google_btns)
+                if ok:
+                    self.human.think(3.0, 5.0)
+                    self._dismiss_modals(page)
+                    if self._is_logged_in(page):
+                        logger.info("[instagram] Login via Google OAuth exitoso")
+                        return True
+            except Exception as exc:
+                logger.warning("[instagram] Google OAuth fallo, intentando con email/pass: %s", exc)
+
+        # ── Intento 2: email + password directo ───────────────────────────────
+        if not self.username or not self.password:
+            logger.error("[instagram] Sin credenciales — configura GOOGLE_EMAIL o IG_USERNAME/IG_PASSWORD")
+            return False
+
+        # Puede que Google OAuth haya navegado — volver al login
+        if IG_LOGIN_URL not in page.url:
+            page.goto(IG_LOGIN_URL, wait_until="domcontentloaded")
+            self.human.think(2.0, 3.5)
+
+        for sel in ["a:has-text('Iniciar sesión')", "a:has-text('Log in')", "a[href='/accounts/login/']"]:
             try:
                 link = page.locator(sel).first
-                if link.is_visible(timeout=3000):
+                if link.is_visible(timeout=2000):
                     link.click()
-                    self.human.think(2.0, 3.5)
-                    self._screenshot(page, "login_after_link_click")
+                    self.human.think(1.5, 3.0)
                     break
             except Exception:
                 pass
 
         self._dismiss_modals(page)
-        self._screenshot(page, "login_after_link")
 
-        # Instagram usa name="email" para usuario y name="pass" para contraseña
-        USER_SEL = "input[name='email'], input[name='username'], input[autocomplete='username webauthn'], input[type='text']:not([type='hidden'])"
+        USER_SEL = "input[name='email'], input[name='username'], input[autocomplete='username webauthn']"
         PASS_SEL = "input[name='pass'], input[name='password'], input[type='password']"
 
         try:
             page.wait_for_selector(USER_SEL, timeout=12000)
             page.locator(USER_SEL).first.fill(self.username)
             self.human.pause(0.6, 1.2)
-
             page.locator(PASS_SEL).first.fill(self.password)
             self.human.pause(0.8, 1.5)
             self._screenshot(page, "login_filled")
 
-            # Submit
             try:
                 page.locator("input[type='submit'], button[type='submit']").first.click()
             except Exception:
                 page.keyboard.press("Enter")
             self.human.think(5.0, 8.0)
+            self._dismiss_modals(page)
             self._screenshot(page, "login_after_submit")
 
-            # Cerrar modales post-login (guardar info, notificaciones)
-            self._dismiss_modals(page)
-            self.human.think(2.0, 3.0)
-
-            if self._is_logged_in(page):
-                logger.info("[instagram] Login exitoso")
-                return True
-
-            # Si URL cambio de /accounts/login/ ya entramos
-            if "/accounts/login" not in page.url:
-                logger.info("[instagram] Login exitoso (por URL)")
+            if self._is_logged_in(page) or "/accounts/login" not in page.url:
+                logger.info("[instagram] Login email/pass exitoso")
                 return True
 
             self._screenshot(page, "login_failed")
@@ -374,8 +380,8 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
                 self.human.think(2.5, 4.0)
 
                 if not self._is_logged_in(page):
-                    if not self._login(page):
-                        results["error"] = "Login fallido — configura IG_USERNAME e IG_PASSWORD"
+                    if not self._login(page, context):
+                        results["error"] = "Login fallido — configura GOOGLE_EMAIL o IG_USERNAME/IG_PASSWORD"
                         return results
                     self._save_cookies(context)
                     # Navegar al home después del login
