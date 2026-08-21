@@ -50,7 +50,7 @@ def import_file(src: Path) -> str:
     # Guardar sesión de la plataforma
     out = SESSIONS_DIR / f"{platform}_session.json"
     out.write_text(json.dumps(cookies, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"  [{platform}] {len(cookies)} cookies → {out}")
+    print(f"  [{platform}] {len(cookies)} cookies -> {out}")
 
     # Compartir cookies Google entre plataformas
     g_cookies = [c for c in cookies if any(d in c.get("domain", "") for d in GOOGLE_DOMAINS)]
@@ -65,7 +65,7 @@ def import_file(src: Path) -> str:
         g_keys = {(c["name"], c.get("domain", "")) for c in g_cookies}
         merged = g_cookies + [c for c in existing if (c["name"], c.get("domain", "")) not in g_keys]
         g_file.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"  [google_session] {len(g_cookies)} cookies Google → {g_file}")
+        print(f"  [google_session] {len(g_cookies)} cookies Google -> {g_file}")
 
     return platform
 
@@ -74,9 +74,9 @@ def main() -> None:
     downloads = find_downloads_dir()
     files = sorted(downloads.glob("me_session_*.json"))
 
-    print("\n╔══════════════════════════════════════════╗")
-    print("║  Mental Equilibrio — Importar Sesiones  ║")
-    print("╚══════════════════════════════════════════╝")
+    print("\n" + "="*46)
+    print("  Mental Equilibrio -- Importar Sesiones")
+    print("="*46)
     print(f"\nBuscando en: {downloads}")
 
     if not files:
@@ -92,8 +92,8 @@ def main() -> None:
             imported.append(platform)
 
     if imported:
-        print(f"\n✓ Importadas: {', '.join(imported)}")
-        print("\nPara producción Docker:")
+        print(f"\nImportadas: {', '.join(imported)}")
+        print("\nPara produccion Docker:")
         print("  docker cp data/sessions motivacion-agentes-scheduler-1:/app/data/sessions")
     else:
         print("\nNo se importó ninguna sesión. Revisa los archivos.")

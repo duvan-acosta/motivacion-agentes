@@ -152,6 +152,20 @@ class YouTubeBrowserPublisher(BaseBrowserPublisher):
         self._screenshot(page, "studio_loaded")
 
         try:
+            # Si YouTube pide crear canal primero, hacerlo automáticamente
+            for btn_text in ["Crear canal", "Create channel"]:
+                try:
+                    btn = page.get_by_role("button", name=btn_text).first
+                    if btn.is_visible(timeout=3000):
+                        logger.info("[youtube] Creando canal de YouTube...")
+                        btn.click()
+                        self.human.think(4.0, 7.0)
+                        self._screenshot(page, "channel_created")
+                        logger.info("[youtube] Canal creado")
+                        break
+                except Exception:
+                    pass
+
             # Botón "Crear" → "Subir videos"
             for sel in [
                 "#create-icon",
