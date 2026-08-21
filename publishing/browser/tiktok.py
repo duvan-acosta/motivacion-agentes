@@ -77,14 +77,18 @@ class TikTokBrowserPublisher(BaseBrowserPublisher):
 
             # Enfoque A: Playwright get_by_text (más robusto — funciona en div/span/button)
             google_btn_attempted = False
+            google_oauth_blocked = False
             for gtext in ["Continuar con Google", "Continue with Google"]:
                 try:
                     loc = page.get_by_text(gtext, exact=True).first
                     loc.wait_for(state="visible", timeout=5000)
                     google_btn_attempted = True
-                    if _click_google_btn_tiktok(loc):
+                    result = _click_google_btn_tiktok(loc)
+                    if result:
                         return True  # login Google exitoso
-                    break  # botón encontrado pero login falló — no reintentar
+                    # result=False → Google bloqueó el login por CDP
+                    google_oauth_blocked = True
+                    break
                 except Exception:
                     continue
 
@@ -101,14 +105,21 @@ class TikTokBrowserPublisher(BaseBrowserPublisher):
                         el = page.wait_for_selector(sel, timeout=5000, state="visible")
                         if el:
                             google_btn_attempted = True
-                            if _click_google_btn_tiktok(el):
+                            result = _click_google_btn_tiktok(el)
+                            if result:
                                 return True
+                            google_oauth_blocked = True
                             break
                     except Exception:
                         continue
 
             if not google_btn_attempted:
                 logger.warning("[tiktok] Boton 'Continuar con Google' no encontrado")
+            elif google_oauth_blocked:
+                logger.error(
+                    "[tiktok] Google bloquea login via CDP. "
+                    "Ejecuta: python setup_sessions.py tiktok  — para login manual"
+                )
 
             # Google OAuth no disponible o falló — probar email/password
 

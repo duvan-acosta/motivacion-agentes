@@ -373,6 +373,27 @@ class GoogleAuthHelper:
                 except Exception:
                     pass
 
+                # Detectar bloqueo de Google (CDP detection) antes de continuar
+                blocked_texts = [
+                    "No se ha podido iniciar sesión",
+                    "No puedes acceder",
+                    "couldn't sign in",
+                    "can't sign in",
+                    "No se puede iniciar sesión",
+                    "This browser or app may not be secure",
+                    "Este navegador o aplicación puede no ser seguro",
+                ]
+                for txt in blocked_texts:
+                    try:
+                        if popup.get_by_text(txt, exact=False).is_visible(timeout=1500):
+                            logger.error(
+                                "[google_auth] Google bloquea CDP en popup. "
+                                "Ejecuta: python setup_sessions.py google youtube tiktok"
+                            )
+                            return False
+                    except Exception:
+                        pass
+
                 # Bypass Passkey antes del campo de contraseña
                 self._bypass_google_passkey(popup)
 

@@ -126,11 +126,24 @@ def setup_platform(name: str) -> None:
         out_file.write_text(json.dumps(cookies, indent=2), encoding="utf-8")
         print(f"✓ {len(cookies)} cookies guardadas en {out_file}")
 
-        # Si es Google, tambien guardar como google_session.json
-        if name == "google":
+        # Extraer y guardar cookies Google por separado (compartidas entre plataformas)
+        # Aplica a: google, youtube, tiktok (OAuth), twitter (OAuth)
+        google_domains = {".google.com", "accounts.google.com", ".googleapis.com", ".youtube.com"}
+        g_cookies = [c for c in cookies if any(d in c.get("domain", "") for d in google_domains)]
+        if g_cookies:
             google_file = SESSIONS_DIR / "google_session.json"
-            google_file.write_text(json.dumps(cookies, indent=2), encoding="utf-8")
-            print(f"✓ Tambien guardadas en {google_file}")
+            # Combinar con cookies Google existentes para no perder otras
+            existing_g: list = []
+            if google_file.exists():
+                try:
+                    existing_g = json.loads(google_file.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+            # Merge: mantener existentes que no estén en las nuevas
+            existing_keys = {(c["name"], c.get("domain", "")) for c in g_cookies}
+            merged = g_cookies + [c for c in existing_g if (c["name"], c.get("domain", "")) not in existing_keys]
+            google_file.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+            print(f"✓ {len(g_cookies)} cookies Google guardadas/actualizadas en {google_file}")
 
         context.close()
         browser.close()
