@@ -125,79 +125,162 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
 
     # ── Publicar feed (imagen) ────────────────────────────────────────────────
 
+    # ── Helpers de creación ───────────────────────────────────────────────────
+
+    def _open_create_dialog(self, page: Any) -> bool:
+        """
+        Abre el diálogo de creación de Instagram. Intenta varios métodos:
+        1. Navegar a /create/select/ directamente
+        2. Clic en el botón "Crear" de la barra lateral
+        Devuelve True si se abrió el diálogo o navegó al flujo de creación.
+        """
+        # Método 1: navegar directo a la URL de creación
+        page.goto(f"{IG_URL}/create/select/", wait_until="domcontentloaded")
+        self.human.think(2.0, 3.5)
+        self._screenshot(page, "create_dialog")
+
+        # Si redirigió al login, hay problema de sesión
+        if "/accounts/login" in page.url:
+            logger.warning("[instagram] Redirigido al login al intentar crear")
+            return False
+
+        # Si hay un input de archivo ya visible → el diálogo está abierto
+        try:
+            page.wait_for_selector("input[type='file']", timeout=4000, state="attached")
+            logger.info("[instagram] Dialogo de creacion abierto via URL")
+            return True
+        except PWTimeout:
+            pass
+
+        # Método 2: clic en botón Crear de la barra lateral
+        page.goto(IG_URL, wait_until="domcontentloaded")
+        self.human.think(2.0, 3.5)
+
+        CREATE_SELS = [
+            # Botón con aria-label
+            "[aria-label='New post']",
+            "[aria-label='Nueva publicación']",
+            "[aria-label='Create']",
+            "[aria-label='Crear']",
+            # SVG con aria-label
+            "svg[aria-label='New post']",
+            "svg[aria-label='Nueva publicación']",
+            "svg[aria-label='Create']",
+            # Link de creación
+            "a[href='/create/select/']",
+            # Texto en sidebar
+            "span:has-text('Create')",
+            "span:has-text('Crear')",
+        ]
+        for sel in CREATE_SELS:
+            try:
+                btn = page.locator(sel).first
+                btn.wait_for(state="visible", timeout=3000)
+                btn.click()
+                self.human.think(1.5, 2.5)
+                self._screenshot(page, "create_btn_clicked")
+                logger.info("[instagram] Boton Crear clicado: %s", sel)
+                return True
+            except Exception:
+                continue
+
+        logger.warning("[instagram] No se encontro boton de creacion")
+        self._screenshot(page, "create_not_found")
+        return False
+
+    def _get_file_input(self, page: Any, timeout: int = 10000) -> Any:
+        """Obtiene el input de archivo del diálogo, visible o no."""
+        # Primero intentar attached (funciona aunque esté hidden)
+        try:
+            return page.wait_for_selector("input[type='file']", timeout=timeout, state="attached")
+        except PWTimeout:
+            pass
+        # Fallback: cualquier input file en el DOM
+        try:
+            el = page.locator("input[type='file']").first
+            el.wait_for(state="attached", timeout=3000)
+            return el
+        except Exception:
+            return None
+
+    def _wizard_to_share(self, page: Any, caption: str) -> bool:
+        """Navega el wizard Next→Next→(caption)→Share/Compartir."""
+        caption_written = False
+        for step in range(6):
+            self._screenshot(page, f"wizard_step_{step}")
+
+            # ¿Ya llegamos a Share?
+            for share_text in ["Share", "Compartir", "Publish", "Publicar"]:
+                try:
+                    btn = page.get_by_role("button", name=share_text).first
+                    if btn.is_visible(timeout=1500):
+                        if not caption_written:
+                            self._fill_caption(page, caption)
+                            self.human.think(1.0, 2.0)
+                            caption_written = True
+                        self.human.before_click(page)
+                        btn.click()
+                        self.human.think(5.0, 9.0)
+                        self._screenshot(page, "published")
+                        return True
+                except Exception:
+                    pass
+
+            # Siguiente paso
+            advanced = False
+            for next_text in ["Next", "Siguiente", "OK", "Continue", "Continuar"]:
+                try:
+                    btn = page.get_by_role("button", name=next_text).first
+                    if btn.is_visible(timeout=1500):
+                        self.human.before_click(page)
+                        btn.click()
+                        self.human.think(1.5, 2.5)
+                        advanced = True
+                        break
+                except Exception:
+                    pass
+
+            if not advanced:
+                break
+
+        return False
+
+    # ── Publicar feed (imagen) ────────────────────────────────────────────────
+
     def _publish_feed(self, page: Any, image_path: Path, caption: str) -> bool:
         logger.info("[instagram] Publicando imagen de feed: %s", image_path.name)
 
         try:
-            self._screenshot(page, "feed_before_create")
+            if not self._open_create_dialog(page):
+                return False
 
-            # Buscar el botón "Nueva publicación" en la barra lateral
-            clicked = False
-            for sel in [
-                "[aria-label='New post']",
-                "[aria-label='Nueva publicación']",
-                "svg[aria-label='New post']",
-                "svg[aria-label='Nueva publicación']",
-            ]:
+            # Si el diálogo tiene opciones (Post/Reel/Story), seleccionar Post
+            for opt_text in ["Post", "Publicación", "Photo", "Foto"]:
                 try:
-                    btn = page.wait_for_selector(sel, timeout=5000)
-                    if btn:
-                        btn.click()
-                        clicked = True
-                        self.human.think(1.5, 3.0)
+                    opt = page.get_by_role("button", name=opt_text).first
+                    if opt.is_visible(timeout=2000):
+                        opt.click()
+                        self.human.think(1.0, 2.0)
+                        logger.info("[instagram] Opcion '%s' seleccionada", opt_text)
                         break
-                except PWTimeout:
-                    continue
+                except Exception:
+                    pass
 
-            if not clicked:
-                # Fallback: input de archivo directamente
-                logger.info("[instagram] Boton + no encontrado, buscando input directo")
+            file_input = self._get_file_input(page)
+            if not file_input:
+                self._screenshot(page, "feed_no_input")
+                logger.error("[instagram] No se encontro input de archivo para feed")
+                return False
 
-            self._screenshot(page, "feed_after_create_click")
-
-            # El input de archivo puede estar presente antes o después del click
-            file_input = page.wait_for_selector(
-                "input[type='file']",
-                timeout=12000,
-                state="attached",
-            )
             file_input.set_input_files(str(image_path))
             logger.info("[instagram] Imagen seleccionada")
             self.human.think(3.0, 5.0)
             self._screenshot(page, "feed_after_file")
 
-            # Wizard: Next → Next → (caption) → Share
-            caption_written = False
-            for _ in range(5):
-                for btn_text in ["Share", "Compartir"]:
-                    try:
-                        share_btn = page.get_by_role("button", name=btn_text)
-                        if share_btn.is_visible(timeout=2000):
-                            if not caption_written:
-                                self._fill_caption(page, caption)
-                                self.human.think(1.0, 2.0)
-                                caption_written = True
-                            share_btn.click()
-                            self.human.think(5.0, 9.0)
-                            self._screenshot(page, "feed_published")
-                            logger.info("[instagram] Feed publicado")
-                            return True
-                    except Exception:
-                        pass
-
-                for btn_text in ["Next", "Siguiente", "OK"]:
-                    try:
-                        next_btn = page.get_by_role("button", name=btn_text)
-                        if next_btn.is_visible(timeout=2000):
-                            next_btn.click()
-                            self.human.think(1.5, 3.0)
-                            self._screenshot(page, f"feed_wizard_step")
-                            break
-                    except Exception:
-                        continue
-
-            self._screenshot(page, "feed_no_share_btn")
-            return False
+            result = self._wizard_to_share(page, caption)
+            if result:
+                logger.info("[instagram] Feed publicado exitosamente")
+            return result
 
         except Exception as exc:
             self._screenshot(page, "feed_error")
@@ -209,55 +292,47 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
     def _publish_reel(self, page: Any, video_path: Path, caption: str) -> bool:
         logger.info("[instagram] Publicando reel: %s", video_path.name)
 
-        page.goto(IG_URL, wait_until="domcontentloaded")
-        self.human.think(2.0, 3.5)
-
         try:
-            # Navegar a crear reel
-            page.goto(f"{IG_URL}/reels/", wait_until="domcontentloaded")
-            self.human.think(1.5, 3.0)
+            if not self._open_create_dialog(page):
+                return False
 
-            # Buscar botón de creación
-            for sel in [
-                "[aria-label='New reel']",
-                "svg[aria-label='Nuevo reel']",
-                "a[href='/create/select/']",
-            ]:
+            # Seleccionar opción Reel en el diálogo de creación
+            for opt_text in ["Reel", "Video"]:
                 try:
-                    btn = page.wait_for_selector(sel, timeout=4000)
-                    if btn:
-                        btn.click()
+                    opt = page.get_by_role("button", name=opt_text).first
+                    if opt.is_visible(timeout=2000):
+                        opt.click()
+                        self.human.think(1.0, 2.0)
+                        logger.info("[instagram] Opcion '%s' seleccionada", opt_text)
                         break
-                except PWTimeout:
-                    continue
-
-            self.human.think(2.0, 3.5)
-
-            # Subir video
-            file_input = page.wait_for_selector(
-                "input[type='file'][accept*='video']",
-                timeout=10000,
-                state="attached",
-            )
-            file_input.set_input_files(str(video_path))
-            self.human.think(5.0, 9.0)  # Procesamiento de video tarda más
-
-            # Wizard de reel
-            for next_text in ["Next", "Siguiente", "Share", "Compartir"]:
-                try:
-                    next_btn = page.get_by_role("button", name=next_text)
-                    if next_btn.is_visible(timeout=4000):
-                        if next_text in ("Share", "Compartir"):
-                            self._fill_caption(page, caption)
-                            self.human.think(1.0, 2.0)
-                        next_btn.click()
-                        self.human.think(2.0, 4.0)
                 except Exception:
-                    continue
+                    pass
 
-            self._screenshot(page, "reel_published")
-            logger.info("[instagram] Reel publicado exitosamente")
-            return True
+            # Input de archivo — aceptar video
+            file_input = None
+            try:
+                file_input = page.wait_for_selector(
+                    "input[type='file'][accept*='video'], input[type='file']",
+                    timeout=10000,
+                    state="attached",
+                )
+            except PWTimeout:
+                file_input = self._get_file_input(page)
+
+            if not file_input:
+                self._screenshot(page, "reel_no_input")
+                logger.error("[instagram] No se encontro input de archivo para reel")
+                return False
+
+            file_input.set_input_files(str(video_path))
+            logger.info("[instagram] Video seleccionado")
+            self.human.think(6.0, 12.0)  # procesamiento de video
+            self._screenshot(page, "reel_after_file")
+
+            result = self._wizard_to_share(page, caption)
+            if result:
+                logger.info("[instagram] Reel publicado exitosamente")
+            return result
 
         except Exception as exc:
             self._screenshot(page, "reel_error")
@@ -355,7 +430,7 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
 
         with sync_playwright() as pw:
             # Desktop 1920x1080 — evita que IG lo trate como tablet
-            browser, context = self._build_context(pw, headless=True, mobile=False, width=1920, height=1080)
+            browser, context = self._build_context(pw, headless=False, mobile=False, width=1920, height=1080)
             page = context.new_page()
 
             try:
