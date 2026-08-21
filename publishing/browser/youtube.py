@@ -162,37 +162,76 @@ class YouTubeBrowserPublisher(BaseBrowserPublisher):
                         self.human.think(4.0, 7.0)
                         self._screenshot(page, "channel_created")
                         logger.info("[youtube] Canal creado")
+                        # Recargar Studio tras crear canal
+                        page.goto(YT_STUDIO, wait_until="domcontentloaded")
+                        self.human.think(3.0, 5.0)
                         break
                 except Exception:
                     pass
 
-            # Botón "Crear" → "Subir videos"
+            # Cerrar modales de bienvenida/onboarding que bloquean la UI
+            for btn_text in ["Continuar", "Continue", "Got it", "Entendido", "Dismiss", "OK"]:
+                try:
+                    btn = page.get_by_role("button", name=btn_text).first
+                    if btn.is_visible(timeout=2000):
+                        btn.click()
+                        self.human.think(1.0, 2.0)
+                        logger.info("[youtube] Modal '%s' cerrado", btn_text)
+                        break
+                except Exception:
+                    pass
+
+            self._screenshot(page, "studio_ready")
+
+            # Botón "Crear" en YouTube Studio → abre menú con "Subir videos"
+            crear_clicked = False
             for sel in [
                 "#create-icon",
                 "ytcp-button#create-icon",
                 "[aria-label='Create']",
+                "[aria-label='Crear']",
                 "button[aria-label*='Crear']",
+                "button[aria-label*='Create']",
+                # Botón con texto en la barra superior
+                "yt-button-shape button",
             ]:
                 try:
                     btn = page.locator(sel).first
-                    if btn.is_visible(timeout=5000):
+                    if btn.is_visible(timeout=3000):
                         btn.click()
                         self.human.think(1.0, 2.0)
+                        crear_clicked = True
+                        logger.info("[youtube] Boton Crear clicado: %s", sel)
                         break
                 except Exception:
                     continue
 
-            # Opción "Subir videos" del menú desplegable
-            for text in ["Subir videos", "Upload videos", "Upload video"]:
-                try:
-                    opt = page.get_by_text(text, exact=False).first
-                    if opt.is_visible(timeout=3000):
-                        opt.click()
-                        self.human.think(2.0, 3.5)
-                        self._screenshot(page, "upload_dialog")
-                        break
-                except Exception:
-                    continue
+            # Si no encontró botón Crear, intentar botón directo "Subir videos" en Studio
+            if not crear_clicked:
+                for text in ["Subir videos", "Upload videos", "Upload"]:
+                    try:
+                        btn = page.get_by_role("button", name=text).first
+                        if btn.is_visible(timeout=2000):
+                            btn.click()
+                            self.human.think(2.0, 3.5)
+                            self._screenshot(page, "upload_dialog")
+                            crear_clicked = True
+                            break
+                    except Exception:
+                        continue
+
+            # Opción "Subir videos" del menú desplegable (si se abrió menú)
+            if crear_clicked:
+                for text in ["Subir videos", "Upload videos", "Upload video"]:
+                    try:
+                        opt = page.get_by_text(text, exact=False).first
+                        if opt.is_visible(timeout=3000):
+                            opt.click()
+                            self.human.think(2.0, 3.5)
+                            self._screenshot(page, "upload_dialog")
+                            break
+                    except Exception:
+                        continue
 
             # Input de archivo
             file_input = page.wait_for_selector(
