@@ -115,11 +115,12 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
                 logger.info("[instagram] Login exitoso — feed detectado")
                 return True
 
-            # Si está en /challenge o /two_factor, Instagram detectó login sospechoso
-            if any(x in page.url for x in ["/challenge", "/two_factor", "/verify"]):
+            # Flujo auth_platform / challenge / two_factor = verificacion manual requerida
+            if any(x in page.url for x in ["/challenge", "/two_factor", "/verify", "auth_platform"]):
                 logger.error(
-                    "[instagram] Instagram pide verificacion adicional (IP/dispositivo nuevo). "
-                    "Inicia sesion manualmente en Chrome y exporta con la extension."
+                    "[instagram] Instagram requiere verificacion manual (dispositivo nuevo). "
+                    "Abre Chrome, haz login en instagram.com, completa el paso de verificacion "
+                    "que aparezca, llega al FEED y exporta las cookies con la extension."
                 )
                 self._screenshot(page, "login_challenge")
                 return False
