@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      width: 300px;
+      padding: 16px;
+      background: #1a1a2e;
+      color: #eee;
+      margin: 0;
+    }
+    h2 { margin: 0 0 4px; font-size: 15px; color: #a78bfa; }
+    p  { margin: 0 0 14px; font-size: 12px; color: #999; }
+    #status {
+      font-size: 13px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #0f0f1a;
+      margin-bottom: 14px;
+      min-height: 20px;
+    }
+    #status.ok  { color: #4ade80; border-left: 3px solid #4ade80; }
+    #status.err { color: #f87171; border-left: 3px solid #f87171; }
+    #status.pending { color: #facc15; border-left: 3px solid #facc15; }
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #7c3aed;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover  { background: #6d28d9; }
+    button:active { background: #5b21b6; }
+    .platform {
+      font-size: 12px;
+      padding: 5px 8px;
+      margin: 4px 0;
+      border-radius: 5px;
+      background: #0f0f1a;
+      display: flex;
+      justify-content: space-between;
+    }
+    .platform .name { color: #c4b5fd; }
+    .platform .val  { color: #6b7280; font-family: monospace; font-size: 11px; }
+    hr { border-color: #2d2d4e; margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <h2>Mental Equilibrio</h2>
+  <p>Exportar sesión del sitio actual al publicador</p>
+
+  <div id="status" class="pending">Listo. Navega al sitio y haz clic en Exportar.</div>
+
+  <button id="btn">Exportar sesión de esta página</button>
+
+  <hr>
+  <div id="info"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
