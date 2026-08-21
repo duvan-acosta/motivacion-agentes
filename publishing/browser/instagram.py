@@ -117,12 +117,30 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
 
             # Flujo auth_platform / challenge / two_factor = verificacion manual requerida
             if any(x in page.url for x in ["/challenge", "/two_factor", "/verify", "auth_platform"]):
-                logger.error(
-                    "[instagram] Instagram requiere verificacion manual (dispositivo nuevo). "
-                    "Abre Chrome, haz login en instagram.com, completa el paso de verificacion "
-                    "que aparezca, llega al FEED y exporta las cookies con la extension."
-                )
+                logger.warning("[instagram] Verificacion manual requerida — URL: %s", page.url)
                 self._screenshot(page, "login_challenge")
+                # El browser ya está abierto y visible (headless=False).
+                # Pedimos al usuario que complete el paso de verificación ahí mismo.
+                print("\n" + "="*60)
+                print("  ACCION REQUERIDA — Instagram pide verificacion")
+                print("="*60)
+                print("\nEn el navegador que se abrio:")
+                print("  1. Completa el paso de verificacion que muestra Instagram")
+                print("     (puede ser confirmar email, codigo SMS, o simplemente Aceptar)")
+                print("  2. Llega hasta el FEED de Instagram (las fotos en tu inicio)")
+                print("\nCuando estes en el feed, regresa aqui y presiona ENTER")
+                print("="*60)
+                try:
+                    input("\nPresiona ENTER cuando estes en el feed de Instagram... ")
+                except EOFError:
+                    pass  # modo no-interactivo (Docker/scheduler)
+                self.human.think(2.0, 3.5)
+                self._dismiss_modals(page)
+                if self._is_logged_in(page):
+                    logger.info("[instagram] Verificacion completada — feed detectado")
+                    return True
+                logger.error("[instagram] Feed no detectado tras verificacion manual")
+                self._screenshot(page, "login_challenge_failed")
                 return False
 
             # Si sigue en login, credenciales incorrectas
