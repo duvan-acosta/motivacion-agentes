@@ -1,8 +1,8 @@
 """
 setup_sessions.py — Login manual UNA VEZ para guardar sesiones.
 
-Google bloquea Playwright/Puppeteer incluso en modo visible (detecta CDP).
-Este script abre Chrome SIN flags de automatizacion — Google lo acepta.
+Google bloquea el Chromium de Playwright pero NO bloquea el Chrome real instalado.
+Este script usa channel='chrome' para abrir el Chrome del sistema — Google lo acepta.
 El usuario hace login normalmente y las cookies se guardan para uso futuro.
 
 Uso:
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -93,25 +94,20 @@ def setup_platform(name: str) -> None:
 
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
-    with sync_playwright() as pw:
-        # Chromium SIN flags de automatizacion — Google acepta esto
-        browser = pw.chromium.launch(
+    with sync_playwright() as pw, tempfile.TemporaryDirectory() as tmp_profile:
+        # Usar Chrome REAL instalado (channel='chrome') con perfil temporal limpio.
+        # Google acepta Chrome real via CDP; bloquea el Chromium bundled de Playwright.
+        # launch_persistent_context crea un perfil de Chrome real — no un WebView.
+        context = pw.chromium.launch_persistent_context(
+            user_data_dir=tmp_profile,
+            channel="chrome",
             headless=False,
+            no_viewport=True,
             args=[
                 "--start-maximized",
                 "--no-first-run",
                 "--no-default-browser-check",
-                # SIN --disable-blink-features=AutomationControlled
-                # SIN CDP flags que delatan automatizacion
             ],
-        )
-        context = browser.new_context(
-            no_viewport=True,
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/126.0.0.0 Safari/537.36"
-            ),
         )
         page = context.new_page()
         page.goto(cfg["url"], wait_until="domcontentloaded")
@@ -146,7 +142,6 @@ def setup_platform(name: str) -> None:
             print(f"✓ {len(g_cookies)} cookies Google guardadas/actualizadas en {google_file}")
 
         context.close()
-        browser.close()
 
     print(f"\n✓ Sesion de {name} configurada exitosamente.")
 
