@@ -1,0 +1,170 @@
+"""
+setup_sessions.py — Login manual UNA VEZ para guardar sesiones.
+
+Google bloquea Playwright/Puppeteer incluso en modo visible (detecta CDP).
+Este script abre Chrome SIN flags de automatizacion — Google lo acepta.
+El usuario hace login normalmente y las cookies se guardan para uso futuro.
+
+Uso:
+    python setup_sessions.py                     # todas las plataformas
+    python setup_sessions.py tiktok youtube      # plataformas especificas
+    python setup_sessions.py google              # solo Google (aplica a YouTube y otros)
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+SESSIONS_DIR = Path("data/sessions")
+
+PLATFORMS = {
+    "google": {
+        "url": "https://myaccount.google.com",
+        "hint": (
+            "1. Ingresa tu correo mentalequilibrio06@gmail.com\n"
+            "2. Haz click en Siguiente\n"
+            "3. Si aparece pantalla de Passkey, haz click en 'Usar una contrasena'\n"
+            "4. Ingresa la contrasena y entra a tu cuenta\n"
+            "5. Cuando veas tu perfil de Google (myaccount.google.com), presiona ENTER"
+        ),
+    },
+    "youtube": {
+        "url": "https://studio.youtube.com",
+        "hint": (
+            "1. El navegador te llevara a login de Google\n"
+            "2. Selecciona la cuenta mentalequilibrio06@gmail.com\n"
+            "3. Cuando veas YouTube Studio (dashboard de creadores), presiona ENTER"
+        ),
+    },
+    "tiktok": {
+        "url": "https://www.tiktok.com/login",
+        "hint": (
+            "1. Haz click en 'Continuar con Google'\n"
+            "2. Selecciona mentalequilibrio06@gmail.com\n"
+            "3. Cuando veas el feed de TikTok (ya logueado), presiona ENTER\n"
+            "\nALTERNATIVA si Google falla:\n"
+            "  - Ve a TikTok app -> Perfil -> Menu -> Configuracion -> Contrasena -> Agregar contrasena\n"
+            "  - Establece: Mental.Equilibrio01#\n"
+            "  - Luego usa 'Usar telefono, correo o nombre de usuario' en la web"
+        ),
+    },
+    "instagram": {
+        "url": "https://www.instagram.com/accounts/login/",
+        "hint": (
+            "PRIMERO resetea la contrasena en instagram.com/accounts/password/reset/\n"
+            "Luego:\n"
+            "1. Ingresa mentalequilibrio06@gmail.com\n"
+            "2. Ingresa la nueva contrasena\n"
+            "3. Cuando veas el feed de Instagram, presiona ENTER"
+        ),
+    },
+    "twitter": {
+        "url": "https://x.com/login",
+        "hint": (
+            "PRIMERO activa la cuenta desde la app de X (iOS/Android):\n"
+            "  - Descarga X, inicia con Google, completa el perfil hasta ver el feed\n"
+            "Luego:\n"
+            "1. En el navegador que se abre, haz click en 'Sign in with Google'\n"
+            "2. Selecciona mentalequilibrio06@gmail.com\n"
+            "3. Cuando veas el feed de X, presiona ENTER"
+        ),
+    },
+    "facebook": {
+        "url": "https://www.facebook.com",
+        "hint": (
+            "1. Ingresa el correo/telefono de Facebook\n"
+            "2. Ingresa la contrasena\n"
+            "3. Cuando veas el feed de Facebook, presiona ENTER"
+        ),
+    },
+}
+
+
+def setup_platform(name: str) -> None:
+    cfg = PLATFORMS[name]
+    print(f"\n{'='*60}")
+    print(f"  CONFIGURANDO: {name.upper()}")
+    print(f"{'='*60}")
+    print(f"\nInstrucciones:\n{cfg['hint']}\n")
+    input("Presiona ENTER para abrir el navegador...")
+
+    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+    with sync_playwright() as pw:
+        # Chromium SIN flags de automatizacion — Google acepta esto
+        browser = pw.chromium.launch(
+            headless=False,
+            args=[
+                "--start-maximized",
+                "--no-first-run",
+                "--no-default-browser-check",
+                # SIN --disable-blink-features=AutomationControlled
+                # SIN CDP flags que delatan automatizacion
+            ],
+        )
+        context = browser.new_context(
+            no_viewport=True,
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/126.0.0.0 Safari/537.36"
+            ),
+        )
+        page = context.new_page()
+        page.goto(cfg["url"], wait_until="domcontentloaded")
+
+        print(f"\nNavegador abierto en {cfg['url']}")
+        print("Completa el login manualmente en el navegador.")
+        print("Cuando estés en la pantalla principal (feed/dashboard), regresa aqui.")
+        input("\nPresiona ENTER para guardar las cookies...")
+
+        cookies = context.cookies()
+        out_file = SESSIONS_DIR / f"{name}_session.json"
+        out_file.write_text(json.dumps(cookies, indent=2), encoding="utf-8")
+        print(f"✓ {len(cookies)} cookies guardadas en {out_file}")
+
+        # Si es Google, tambien guardar como google_session.json
+        if name == "google":
+            google_file = SESSIONS_DIR / "google_session.json"
+            google_file.write_text(json.dumps(cookies, indent=2), encoding="utf-8")
+            print(f"✓ Tambien guardadas en {google_file}")
+
+        context.close()
+        browser.close()
+
+    print(f"\n✓ Sesion de {name} configurada exitosamente.")
+
+
+def main() -> None:
+    targets = sys.argv[1:] if len(sys.argv) > 1 else list(PLATFORMS.keys())
+    invalid = [t for t in targets if t not in PLATFORMS]
+    if invalid:
+        print(f"Plataformas invalidas: {invalid}")
+        print(f"Opciones: {list(PLATFORMS.keys())}")
+        sys.exit(1)
+
+    print("\n╔══════════════════════════════════════════╗")
+    print("║  CONFIGURACION DE SESIONES — Mental Equilibrio  ║")
+    print("╚══════════════════════════════════════════╝")
+    print(f"\nPlataformas a configurar: {', '.join(targets)}")
+    print("\nEste proceso abre un navegador para cada plataforma.")
+    print("Hace login manualmente — las cookies se guardan automaticamente.")
+    print("\nLas sesiones duran 30-90 dias (se renueva sola con cada publicacion).")
+
+    for name in targets:
+        setup_platform(name)
+        print()
+
+    print("\n╔══════════════════════════════════════════╗")
+    print("║  ✓ SESIONES CONFIGURADAS                 ║")
+    print("╚══════════════════════════════════════════╝")
+    print("\nAhora el scheduler puede publicar sin necesidad de login.")
+    print("Copia las sesiones al servidor si ejecutas en Docker:")
+    print(f"  docker cp {SESSIONS_DIR} motivacion-agentes-scheduler-1:/app/data/sessions")
+
+
+if __name__ == "__main__":
+    main()

@@ -54,7 +54,13 @@ class GoogleAuthHelper:
     # ── Login Google directo ───────────────────────────────────────────────────
 
     def _google_login(self, page: Any) -> bool:
-        """Hace login en Google con email+password. Devuelve True si éxito."""
+        """
+        Hace login en Google con email+password.
+        NOTA: Google bloquea login desde Playwright/Puppeteer (detecta CDP).
+        Si falla con 'No se ha podido iniciar sesion', ejecuta:
+            python setup_sessions.py google
+        para hacer login manualmente y guardar las cookies.
+        """
         email = self._google_email()
         password = self._google_password()
         if not email or not password:
@@ -65,6 +71,19 @@ class GoogleAuthHelper:
         page.goto(GOOGLE_LOGIN_URL, wait_until="domcontentloaded")
         self.human.think(2.0, 4.0)  # type: ignore[attr-defined]
 
+        # Detectar bloqueo de Google antes de continuar
+        blocked_texts = ["No se ha podido iniciar sesion", "No puedes acceder", "couldn't sign in", "can't sign in"]
+        for txt in blocked_texts:
+            try:
+                if page.get_by_text(txt, exact=False).is_visible(timeout=1500):
+                    logger.error(
+                        "[google_auth] Google bloquea este navegador. "
+                        "Ejecuta: python setup_sessions.py google  — para login manual"
+                    )
+                    return False
+            except Exception:
+                pass
+
         try:
             # Email
             page.wait_for_selector(_EMAIL_SEL, timeout=12000)
@@ -72,6 +91,18 @@ class GoogleAuthHelper:
             self.human.pause(0.6, 1.2)  # type: ignore[attr-defined]
             self._click_google_next(page)
             self.human.think(2.0, 3.5)  # type: ignore[attr-defined]
+
+            # Detectar bloqueo post-email
+            for txt in blocked_texts:
+                try:
+                    if page.get_by_text(txt, exact=False).is_visible(timeout=1000):
+                        logger.error(
+                            "[google_auth] Google bloqueo post-email. "
+                            "Ejecuta: python setup_sessions.py google"
+                        )
+                        return False
+                except Exception:
+                    pass
 
             # Google puede mostrar pantalla de Passkey antes del campo de contraseña
             self._bypass_google_passkey(page)
@@ -105,11 +136,13 @@ class GoogleAuthHelper:
                 logger.info("[google_auth] Login Google exitoso (verificacion manual)")
                 return True
             except PWTimeout:
-                logger.warning("[google_auth] Login Google fallido — URL: %s", page.url)
+                logger.warning(
+                    "[google_auth] Login Google fallido — ejecuta: python setup_sessions.py google"
+                )
                 return False
 
         except Exception as exc:
-            logger.error("[google_auth] Error en login Google: %s", exc)
+            logger.error("[google_auth] Error en login Google: %s — ejecuta: python setup_sessions.py google", exc)
             return False
 
     def _bypass_google_passkey(self, page: Any) -> None:
