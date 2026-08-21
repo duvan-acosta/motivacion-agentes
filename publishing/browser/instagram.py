@@ -119,28 +119,34 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
             if any(x in page.url for x in ["/challenge", "/two_factor", "/verify", "auth_platform"]):
                 logger.warning("[instagram] Verificacion manual requerida — URL: %s", page.url)
                 self._screenshot(page, "login_challenge")
-                # El browser ya está abierto y visible (headless=False).
-                # Pedimos al usuario que complete el paso de verificación ahí mismo.
                 print("\n" + "="*60)
                 print("  ACCION REQUERIDA — Instagram pide verificacion")
                 print("="*60)
                 print("\nEn el navegador que se abrio:")
-                print("  1. Completa el paso de verificacion que muestra Instagram")
-                print("     (puede ser confirmar email, codigo SMS, o simplemente Aceptar)")
-                print("  2. Llega hasta el FEED de Instagram (las fotos en tu inicio)")
-                print("\nCuando estes en el feed, regresa aqui y presiona ENTER")
-                print("="*60)
-                try:
-                    input("\nPresiona ENTER cuando estes en el feed de Instagram... ")
-                except EOFError:
-                    pass  # modo no-interactivo (Docker/scheduler)
-                self.human.think(2.0, 3.5)
-                self._dismiss_modals(page)
-                if self._is_logged_in(page):
-                    logger.info("[instagram] Verificacion completada — feed detectado")
-                    return True
-                logger.error("[instagram] Feed no detectado tras verificacion manual")
-                self._screenshot(page, "login_challenge_failed")
+                print("  1. Puede aparecer 'Consulta las notificaciones en otro dispositivo'")
+                print("     → Abre Instagram en tu telefono/app y APRUEBA el inicio de sesion")
+                print("  2. O puede pedir codigo por email/SMS — ingrésalo en el navegador")
+                print("  3. Espera hasta ver el FEED (fotos en tu pantalla de inicio)")
+                print("\nEste script detectara automaticamente cuando llegues al feed.")
+                print("Maximo de espera: 5 minutos.")
+                print("="*60 + "\n")
+
+                # Monitorear automáticamente hasta 5 minutos
+                import time as _t
+                deadline = _t.time() + 300  # 5 minutos
+                check_interval = 5
+                while _t.time() < deadline:
+                    self._dismiss_modals(page)
+                    if self._is_logged_in(page):
+                        logger.info("[instagram] Feed detectado — verificacion completada")
+                        return True
+                    remaining = int(deadline - _t.time())
+                    print(f"\r  Esperando feed... ({remaining}s restantes) URL: {page.url[:60]}", end="", flush=True)
+                    _t.sleep(check_interval)
+
+                print()  # salto de linea tras el progreso
+                logger.error("[instagram] Timeout: feed no detectado en 5 minutos")
+                self._screenshot(page, "login_challenge_timeout")
                 return False
 
             # Si sigue en login, credenciales incorrectas
