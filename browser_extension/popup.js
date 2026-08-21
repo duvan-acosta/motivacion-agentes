@@ -1,4 +1,3 @@
-// Mapeo de dominio → nombre de plataforma
 const PLATFORM_MAP = {
   "google.com":    "google",
   "youtube.com":   "youtube",
@@ -22,23 +21,11 @@ function setStatus(msg, type = "pending") {
   el.className = type;
 }
 
-function showInfo(platform, cookieCount) {
-  document.getElementById("info").innerHTML = `
-    <div class="platform">
-      <span class="name">${platform}</span>
-      <span class="val">${cookieCount} cookies</span>
-    </div>
-  `;
-}
-
 async function exportSession() {
   setStatus("Obteniendo pestaña activa...", "pending");
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) {
-    setStatus("No se pudo obtener la URL de la pestaña", "err");
-    return;
-  }
+  if (!tab?.url) { setStatus("No se pudo obtener la URL", "err"); return; }
 
   const url = new URL(tab.url);
   const platform = detectPlatform(url.hostname);
@@ -50,11 +37,11 @@ async function exportSession() {
 
   setStatus(`Leyendo cookies de ${platform}...`, "pending");
 
-  // Obtener todas las cookies del dominio actual
-  const cookies = await chrome.cookies.getAll({ domain: url.hostname.replace(/^www\./, "") });
+  // Leer cookies — incluir subdominios
+  const baseDomain = url.hostname.replace(/^(www\.|studio\.)/, "");
+  let allCookies = await chrome.cookies.getAll({ domain: baseDomain });
 
-  // Para Google también capturar subdominios
-  let allCookies = [...cookies];
+  // Para Google/YouTube capturar también .google.com
   if (platform === "google" || platform === "youtube") {
     const extra = await chrome.cookies.getAll({ domain: ".google.com" });
     const seen = new Set(allCookies.map(c => c.name + "|" + c.domain));
@@ -64,19 +51,17 @@ async function exportSession() {
   }
 
   if (allCookies.length === 0) {
-    setStatus(`Sin cookies en ${platform} — ¿estás logueado?`, "err");
+    setStatus(`Sin cookies en ${platform}. ¿Estás logueado?`, "err");
     return;
   }
 
-  setStatus(`Enviando ${allCookies.length} cookies al servidor local...`, "pending");
-
-  // Convertir cookies al formato que espera Playwright (sameSite como string)
+  // Convertir al formato Playwright
   const playwrightCookies = allCookies.map(c => ({
     name:     c.name,
     value:    c.value,
     domain:   c.domain,
     path:     c.path,
-    expires:  c.expirationDate || -1,
+    expires:  c.expirationDate ?? -1,
     httpOnly: c.httpOnly,
     secure:   c.secure,
     sameSite: c.sameSite === "no_restriction" ? "None"
@@ -85,23 +70,24 @@ async function exportSession() {
              : "Lax",
   }));
 
+  // Descargar como JSON — va directo a la carpeta de Descargas
+  const json = JSON.stringify(playwrightCookies, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const blobUrl = URL.createObjectURL(blob);
+  const filename = `me_session_${platform}.json`;
+
   try {
-    const resp = await fetch("http://localhost:7788/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ platform, cookies: playwrightCookies }),
+    await chrome.downloads.download({
+      url: blobUrl,
+      filename,
+      saveAs: false,   // descarga automática sin diálogo
+      conflictAction: "overwrite",
     });
-
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const result = await resp.json();
-
-    setStatus(`✓ ${result.message}`, "ok");
-    showInfo(platform, allCookies.length);
+    setStatus(`✓ Descargado: ${filename}\n(${allCookies.length} cookies)\n\nEjecuta: python import_sessions.py`, "ok");
   } catch (err) {
-    setStatus(
-      `Error al enviar: ${err.message}\n\nAsegúrate de que el servidor local está corriendo:\n  python collect_cookies.py`,
-      "err"
-    );
+    setStatus(`Error al descargar: ${err.message}`, "err");
+  } finally {
+    URL.revokeObjectURL(blobUrl);
   }
 }
 
