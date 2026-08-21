@@ -110,12 +110,39 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
             self._dismiss_modals(page)
             self._screenshot(page, "login_after_submit")
 
-            if self._is_logged_in(page) or "/accounts/login" not in page.url:
-                logger.info("[instagram] Login exitoso")
+            # Verificar login real: debe aparecer el feed, no solo salir del /login
+            if self._is_logged_in(page):
+                logger.info("[instagram] Login exitoso — feed detectado")
                 return True
 
-            self._screenshot(page, "login_failed")
-            logger.warning("[instagram] Login fallo — el usuario debe resetear contrasena en instagram.com/accounts/password/reset/")
+            # Si está en /challenge o /two_factor, Instagram detectó login sospechoso
+            if any(x in page.url for x in ["/challenge", "/two_factor", "/verify"]):
+                logger.error(
+                    "[instagram] Instagram pide verificacion adicional (IP/dispositivo nuevo). "
+                    "Inicia sesion manualmente en Chrome y exporta con la extension."
+                )
+                self._screenshot(page, "login_challenge")
+                return False
+
+            # Si sigue en login, credenciales incorrectas
+            if "/accounts/login" in page.url:
+                self._screenshot(page, "login_failed")
+                logger.warning("[instagram] Credenciales incorrectas o cuenta bloqueada")
+                return False
+
+            # Otro caso: redirigido pero no al feed (pantalla intermedia de IG)
+            logger.warning("[instagram] Login ambiguo — URL: %s. Esperando feed...", page.url)
+            self.human.think(3.0, 5.0)
+            self._dismiss_modals(page)
+            if self._is_logged_in(page):
+                logger.info("[instagram] Feed detectado tras espera extra")
+                return True
+
+            self._screenshot(page, "login_no_feed")
+            logger.error(
+                "[instagram] No se pudo confirmar el feed tras login. "
+                "Exporta la sesion con la extension Chrome estando en el feed de Instagram."
+            )
             return False
 
         except Exception as exc:
