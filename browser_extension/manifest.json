@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Mental Equilibrio — Exportar Sesión",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Exporta cookies de la plataforma actual al publicador autónomo",
-  "permissions": ["cookies", "activeTab", "downloads"],
+  "permissions": ["cookies", "activeTab"],
   "host_permissions": [
     "https://*.google.com/*",
     "https://*.youtube.com/*",

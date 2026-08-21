@@ -21,6 +21,19 @@ function setStatus(msg, type = "pending") {
   el.className = type;
 }
 
+function downloadJson(filename, data) {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 async function exportSession() {
   setStatus("Obteniendo pestaña activa...", "pending");
 
@@ -31,17 +44,16 @@ async function exportSession() {
   const platform = detectPlatform(url.hostname);
 
   if (!platform) {
-    setStatus(`Sitio no reconocido: ${url.hostname}\nNavega a Google, YouTube, TikTok, Instagram, X o Facebook`, "err");
+    setStatus(`Sitio no reconocido:\n${url.hostname}\n\nNavega a: google.com, youtube.com,\ntiktok.com, instagram.com, x.com\no facebook.com`, "err");
     return;
   }
 
   setStatus(`Leyendo cookies de ${platform}...`, "pending");
 
-  // Leer cookies — incluir subdominios
   const baseDomain = url.hostname.replace(/^(www\.|studio\.)/, "");
   let allCookies = await chrome.cookies.getAll({ domain: baseDomain });
 
-  // Para Google/YouTube capturar también .google.com
+  // Para Google/YouTube incluir también .google.com
   if (platform === "google" || platform === "youtube") {
     const extra = await chrome.cookies.getAll({ domain: ".google.com" });
     const seen = new Set(allCookies.map(c => c.name + "|" + c.domain));
@@ -51,11 +63,11 @@ async function exportSession() {
   }
 
   if (allCookies.length === 0) {
-    setStatus(`Sin cookies en ${platform}. ¿Estás logueado?`, "err");
+    setStatus(`Sin cookies en ${platform}.\n¿Estás logueado en esta pestaña?`, "err");
     return;
   }
 
-  // Convertir al formato Playwright
+  // Formato Playwright
   const playwrightCookies = allCookies.map(c => ({
     name:     c.name,
     value:    c.value,
@@ -70,24 +82,11 @@ async function exportSession() {
              : "Lax",
   }));
 
-  // Descargar como JSON — va directo a la carpeta de Descargas
-  const json = JSON.stringify(playwrightCookies, null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  const blobUrl = URL.createObjectURL(blob);
-  const filename = `me_session_${platform}.json`;
-
   try {
-    await chrome.downloads.download({
-      url: blobUrl,
-      filename,
-      saveAs: false,   // descarga automática sin diálogo
-      conflictAction: "overwrite",
-    });
-    setStatus(`✓ Descargado: ${filename}\n(${allCookies.length} cookies)\n\nEjecuta: python import_sessions.py`, "ok");
+    downloadJson(`me_session_${platform}.json`, playwrightCookies);
+    setStatus(`✓ Descargado: me_session_${platform}.json\n(${allCookies.length} cookies)\n\nLuego ejecuta:\npython import_sessions.py`, "ok");
   } catch (err) {
-    setStatus(`Error al descargar: ${err.message}`, "err");
-  } finally {
-    URL.revokeObjectURL(blobUrl);
+    setStatus(`Error: ${err.message}`, "err");
   }
 }
 
