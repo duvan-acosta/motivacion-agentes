@@ -129,53 +129,44 @@ class InstagramBrowserPublisher(BaseBrowserPublisher):
 
     def _open_create_dialog(self, page: Any) -> bool:
         """
-        Abre el diálogo de creación de Instagram. Intenta varios métodos:
-        1. Navegar a /create/select/ directamente
-        2. Clic en el botón "Crear" de la barra lateral
-        Devuelve True si se abrió el diálogo o navegó al flujo de creación.
+        Abre el diálogo de creación de Instagram clicando el link del sidebar.
+        IMPORTANTE: NO navegar a /create/select/ con page.goto() — Instagram lo
+        interpreta como el perfil del usuario @create (SPA vs full-page load).
+        El clic en el anchor usa el routing JS de React y abre el modal correcto.
         """
-        # Método 1: navegar directo a la URL de creación
-        page.goto(f"{IG_URL}/create/select/", wait_until="domcontentloaded")
-        self.human.think(2.0, 3.5)
-        self._screenshot(page, "create_dialog")
+        # Asegurar que estamos en home y logueados
+        if IG_URL not in page.url or "/accounts/login" in page.url:
+            page.goto(IG_URL, wait_until="domcontentloaded")
+            self.human.think(2.0, 3.5)
 
-        # Si redirigió al login, hay problema de sesión
-        if "/accounts/login" in page.url:
-            logger.warning("[instagram] Redirigido al login al intentar crear")
+        self._screenshot(page, "create_before")
+
+        # Verificar sesión activa antes de buscar el botón
+        if "/accounts/login" in page.url or "Registrarte" in page.content():
+            logger.warning("[instagram] No autenticado al intentar crear post")
             return False
 
-        # Si hay un input de archivo ya visible → el diálogo está abierto
-        try:
-            page.wait_for_selector("input[type='file']", timeout=4000, state="attached")
-            logger.info("[instagram] Dialogo de creacion abierto via URL")
-            return True
-        except PWTimeout:
-            pass
-
-        # Método 2: clic en botón Crear de la barra lateral
-        page.goto(IG_URL, wait_until="domcontentloaded")
-        self.human.think(2.0, 3.5)
-
+        # Selectores del botón Crear en el sidebar (en orden de preferencia)
+        # El link a[href='/create/select/'] usa SPA routing — NO page.goto()
         CREATE_SELS = [
-            # Botón con aria-label
+            "a[href='/create/select/']",           # link sidebar — más fiable
             "[aria-label='New post']",
             "[aria-label='Nueva publicación']",
             "[aria-label='Create']",
             "[aria-label='Crear']",
-            # SVG con aria-label
             "svg[aria-label='New post']",
             "svg[aria-label='Nueva publicación']",
-            "svg[aria-label='Create']",
-            # Link de creación
-            "a[href='/create/select/']",
-            # Texto en sidebar
-            "span:has-text('Create')",
-            "span:has-text('Crear')",
+            # Texto en nav (contexto restringido al sidebar para no pillar 'Crear cuenta')
+            "nav span:has-text('Create')",
+            "nav span:has-text('Crear')",
+            "nav a span:has-text('Create')",
+            "nav a span:has-text('Crear')",
         ]
         for sel in CREATE_SELS:
             try:
                 btn = page.locator(sel).first
                 btn.wait_for(state="visible", timeout=3000)
+                self.human.before_click(page)
                 btn.click()
                 self.human.think(1.5, 2.5)
                 self._screenshot(page, "create_btn_clicked")
